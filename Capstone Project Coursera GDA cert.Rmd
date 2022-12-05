@@ -9,28 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-
-
 *This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business.*
 
 # Business task
@@ -50,21 +28,17 @@ The stakeholders are
 - The Cyclistic executive team the will decide whether to approve the recommended marketing program
 
 ## Method
-I will use Jupyter Notebook using R for data cleaning and visualization to keep everything in one place and to document all the steps and assumptions.
+I will use A R Markdown notebook using R for data cleaning and visualization to keep everything in one place and to document all the steps and assumptions. The size of the dataset is split into several CSV files, making the size of the data too large for Excel. Since the results will be shown to the stakeholders, there will be more emphasis on the visualizations.
 ## Data
 The dataset that will be used to answer the business task is Cyclstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. Each file is labeled `YYYYMM-divvy-publictripdata.csv` and the data range goes from 202110 to 202209.
 
-```{r}
+```{r libraries, echo=FALSE}
 library(tidyverse)
 ```
 
 
-```{r}
-tripdata_202110 <- read_csv("01.Learning_and_resources\5.Google_Data_Analytics_Certificate_Coursera\Google-Data-Analyst-Capstone-Project\Raw_Data\202110-divvy-tripdata\202110-divvy-tripdata.csv")
-```
-
-
-```{r}
+```{r data import, echo=FALSE}
+tripdata_202110 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202110-divvy-tripdata")
 tripdata_202111 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202111-divvy-tripdata")
 tripdata_202112 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202112-divvy-tripdata")
 tripdata_202201 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202201-divvy-tripdata")
@@ -78,6 +52,8 @@ tripdata_202208 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytic
 tripdata_202209 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202209-divvy-tripdata")
 
 ```
+
+
 
 
 ```{r}
