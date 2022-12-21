@@ -1,4 +1,5 @@
-```{r}
+
+```{r eval=FALSE, include=FALSE}
 #read all the CSV files of trip data for the past 12 months as dataframes in R and define them as separate variables
 tripdata_202111 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202111-divvy-tripdata")
 tripdata_202112 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202112-divvy-tripdata")
@@ -11,7 +12,9 @@ tripdata_202206 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytic
 tripdata_202207 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202207-divvy-tripdata")
 tripdata_202208 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202208-divvy-tripdata")
 tripdata_202209 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202209-divvy-tripdata")
+```
 
+```{r eval=FALSE, include=FALSE}
 #combine all the dataframes into one large dataframe
 trip_data = 
   
