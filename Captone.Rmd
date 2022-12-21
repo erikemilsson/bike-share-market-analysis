@@ -1,0 +1,76 @@
+---
+title: "Capostone Project"
+author: "Erik Emilsson"
+date: "20 December 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business.*
+
+# Business task
+Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. Currently there are two types of riders: 1) **casual riders** (those who buy single-ride or full-day passes), and 2) **annual members a.k.a. Cyclistic members**. The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of marketing) and Cyclistics finance analyst have concluded that that annual members are more profitable than casual riders. Before this, Cyclistic have focused on building general awareness and appealing to broad consumer segments.
+
+Currently 8 percent of riders use assistive options (e.g. reclining bikes, hand tricycles, and cargo bikes) while the rest use traditional bikes. Those who use traditional bikes are more likely to be casual riders, but about 30 percent of them use the service to commute to work each day.
+
+Of the the following three questions that will guide the larger scope of the future marketing program, this report will only answer the first question:
+
+- <mark>**How do annual members and casual riders use Cyclistic bikes differently?** </mark>
+- Why would casual riders buy Cyclistic annual memberships?
+- How can Cyclistic use digital media to influence casual riders to become members?
+
+The stakeholders are 
+- Lily Moreno, director of marketing and my manager,
+- The Cyclistic marketing analytics team, a team of data analysts of which I am a part of. The team supports the Cyclistic marketing strategy with data. 
+- The Cyclistic executive team the will decide whether to approve the recommended marketing program
+
+# Method
+I am using R in R-markdown for data import, cleaning and visualization as well as the final reporting. R-markdown can do all these steps and having everyting in oine place keeps track of the assumptions and steps of the analysis for transparency and reporoducibilty.
+
+# Analysis
+
+The dataset that will be used to answer the business task is Cyclstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. Each file is labeled `YYYYMM-divvy-publictripdata.csv` and the data range goes from 202110 to 202209.
+
+## Data import
+
+```{r}
+#import package(s)
+library(tidyverse)
+```
+
+
+
+```{r}
+#read all the CSV files of trip data for the past 12 months as dataframes in R and define them as separate variables
+tripdata_202111 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202111-divvy-tripdata")
+tripdata_202112 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202112-divvy-tripdata")
+tripdata_202201 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202201-divvy-tripdata")
+tripdata_202202 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202202-divvy-tripdata")
+tripdata_202203 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202203-divvy-tripdata")
+tripdata_202204 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202204-divvy-tripdata")
+tripdata_202205 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202205-divvy-tripdata")
+tripdata_202206 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202206-divvy-tripdata")
+tripdata_202207 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202207-divvy-tripdata")
+tripdata_202208 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202208-divvy-tripdata")
+tripdata_202209 <- read_csv("D:/01.Learning_and_resources/5.Google_Data_Analytics_Certificate_Coursera/Google-Data-Analyst-Capstone-Project/Raw Data/202209-divvy-tripdata")
+
+#combine all the dataframes into one large dataframe
+trip_data = 
+
+print(as_tibble(tripdata_202209))
+```
+
+
+```{r}
+head(tripdata_202110)
+```
+
+```{r}
+library(ggplot2)
+ggplot(data=iris, aes(x=Sepal.Length, y=Sepal.Width, color=Species)) + geom_point(size=3)
+```
+
+
