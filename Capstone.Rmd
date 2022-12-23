@@ -38,10 +38,11 @@ The dataset that will be used to answer the business task is Cyclstic's historic
 #import package(s)
 library(tidyverse)
 library(skimr)
+library(janitor)
 ```
 
 ## Import data and append data
-```{r}
+```{r, message=FALSE, echo=FALSE}
 #read all the CSV files of trip data for the past 12 months as dataframes in R
 df_202110 <- read_csv("202110-divvy-tripdata.csv")
 df_202111 <- read_csv("202111-divvy-tripdata.csv")
@@ -57,10 +58,9 @@ df_202208 <- read_csv("202208-divvy-tripdata.csv")
 df_202209 <- read_csv("202209-divvy-publictripdata.csv")
 ```
 
-## Inspect & clean data
+## Inspect and clean data
 
 Using the head function I checked that the headers of each of the dataframes is the same, meaning that appending all of them is possible and will make the exploratory data analysis a lot easier since it will only be done once instead of twelve times.
-
 ```{r}
 #appends all the dataframes above into one single dataframe
 df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
@@ -68,33 +68,75 @@ df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_
 
 The headers are made of 13 columns, which contain information such as: 
 * unique rider IDs, 
-* type of bike, 
+* Bike type, 
 * start & end times/station name/ID/coordinates, and
 * type of member/rider.
 
 Since the goal is to understand how members and caual riders ride Cyclistic bikes differently, it is reasonable to expect that the last column will be used to find correlations with other data in the dataframe.
 
 There are some missing values in the first few rows. Using other functions should give more insight into how often they occur and for what columns.
-
 ```{r}
 head(df)
 ```
 
-The glimpse function shows that there are over five million rows.
-
+Rename the headers in the dataframe to make them more descriptive:
 ```{r}
-glimpse(df)
-```
-Using the skimr package function skim_without_charts more information about the occurances of values in the different rows can be optained (n_unique). There is also information on mising values for some of the columns. The ones 
-
-```{r}
-skim_without_charts(df_202110)
+df_1 <- df %>% 
+  rename(Rider_ID = ride_id) %>%
+  rename(Bike_Type = rideable_type) %>%
+  rename(Member_Type = member_casual)
 ```
 
+Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and calling the new column header 'Total_Time':
 
 ```{r}
-skim_without_charts(df)
+df_2 <- df_1 %>%
+  mutate(Total_Time = ended_at - started_at)
+```
+
+This gives a result in seconds which is acceptable.
+```{r}
+select(df_2,Total_Time)
+```
+
+Using the glimpse function shows that there are over five million rows for the entire dataset.
+
+```{r}
+glimpse(df_2)
+```
+Using the skimr package function skim_without_charts more information about the occurances of values in the different rows can be obtained (n_unique). For instance, rideable_type shows that there are three unique types of bikes.
+
+
+```{r}
+skim_without_charts(df_2)
 ```
 
 
+There is missing data on for start/end station name & ID as well as some of the end coordinates. The coordinates contain exact positions on the map, so there is some redundancy with the station information. Since the coordinates are more easy to eventually plot on a map and since they contain fewer NA values than the station data, I will remove the columns for 'start_station_name', 'start_station_id', 'end_station_name', and 'end_station_id'. I will also remove the 5844 rows with missing end coordinates (they are a drop in the ocean, ~0.1%, compared to the over 5 million rows).
+
+```{r}
+df_3 <- df_2 %>%
+  select(Rider_ID, Bike_Type, started_at, ended_at, Total_Time, start_lat, start_lng, end_lat, end_lng, Member_Type)
+```
+
+# Data 
+
+From this dataframe, separate dataframe will be created to plot the data for comparisons:
+
+* Member Type vs. Bike Type
+* Member Type vs. Total Ride Time
+* Member Type vs. Starting Ride time
+* Member Type vs. Geographical Location (Starting location)
+
+Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
+
+```{r}
+df_3
+```
+
+
+## 
+I want to remane the column headers and create calculated columns:
+* Total ride time using started_at and ended_at
+* Determine how many of the riders are 
 
