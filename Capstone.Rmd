@@ -98,41 +98,57 @@ This gives a result in seconds which is acceptable.
 ```{r}
 select(df_2,Total_Time)
 ```
-
 Using the glimpse function shows that there are over five million rows for the entire dataset.
-
 ```{r}
 glimpse(df_2)
 ```
 Using the skimr package function skim_without_charts more information about the occurances of values in the different rows can be obtained (n_unique). For instance, rideable_type shows that there are three unique types of bikes.
-
-
 ```{r}
 skim_without_charts(df_2)
 ```
+There is a high percentage of missing data on for start/end station name & ID (about 15%) but also some missing data for the end coordinates (~0.1%). 
 
-
-There is missing data on for start/end station name & ID as well as some of the end coordinates. The coordinates contain exact positions on the map, so there is some redundancy with the station information. Since the coordinates are more easy to eventually plot on a map and since they contain fewer NA values than the station data, I will remove the columns for 'start_station_name', 'start_station_id', 'end_station_name', and 'end_station_id'. I will also remove the 5844 rows with missing end coordinates (they are a drop in the ocean, ~0.1%, compared to the over 5 million rows).
-
+I will remove the columns for 'start_station_name', 'start_station_id', 'end_station_name', and 'end_station_id'. This is because the coordinates contain exact positions on the map and thus the station IDs and names are not essential for this analysis. The coordinates also contain fewer NA values than the station data. I will also remove the 5844 rows with missing end coordinates as they are a drop in the ocean, ~0.1%, of the over 5 million rows of rider data.
 ```{r}
 df_3 <- df_2 %>%
-  select(Rider_ID, Bike_Type, started_at, ended_at, Total_Time, start_lat, start_lng, end_lat, end_lng, Member_Type)
+  select(Rider_ID, Bike_Type, started_at, ended_at, Total_Time, start_lat, start_lng, end_lat, end_lng, Member_Type) %>%
+  na.omit(df_3)
 ```
+The dataframe is now ready to be used in visualizations for evaluating the business task.
 
 # Data 
 
-From this dataframe, separate dataframe will be created to plot the data for comparisons:
-
-* Member Type vs. Bike Type
-* Member Type vs. Total Ride Time
-* Member Type vs. Starting Ride time
-* Member Type vs. Geographical Location (Starting location)
-
-Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
+## Member Type vs. Bike Type
 
 ```{r}
-df_3
+df_membertype_biketype <- df_3 %>%
+  select(Member_Type, Bike_Type)
 ```
+
+```{r}
+df_membertype_nobiketype <- df_membertype_biketype %>%
+  select(Member_Type)
+  ggplot(data=df_membertype_nobiketype) + geom_bar(mapping = aes(x=Member_Type))
+```
+There are more members than casual riders currently.
+
+```{r}
+ggplot(data=df_membertype_biketype) + geom_bar(mapping = aes(x=Member_Type, fill=Bike_Type), position = "fill") + labs(title="Ratio of Bike Types per Member Types", x = "Member Type", y = "Ratio")
+```
+
+ get the ratio of each I will take them both as part of 100%:
+```{r}
+df_membertype_biketype_ratio <- df_membertype_biketype %>%
+  mutate
+```
+
+
+## Member Type vs. Total Ride Time
+
+
+## Member Type vs. Starting Ride time
+## Member Type vs. Geographical Location (Starting location)
+##Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
 
 
 ## 
