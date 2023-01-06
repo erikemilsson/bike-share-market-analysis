@@ -9,29 +9,38 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-*This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business.*
+*This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business. I am using R in R-markdown for data import, cleaning and visualization as well as the final reporting. R-markdown can do all these steps and having everything in one place keeps track of the assumptions and steps of the analysis for transparency and reporoducibilty.*
 
-# Business task
-Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. Currently there are two types of riders: 1) **casual riders** (those who buy single-ride or full-day passes), and 2) **annual members a.k.a. Cyclistic members**. The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of marketing) and Cyclistics finance analyst have concluded that that annual members are more profitable than casual riders. Before this, Cyclistic have focused on building general awareness and appealing to broad consumer segments.
+The project will be split up into three parts:
+1.Business Task
+2.
+
+# 1.Business task
+Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. Currently there are two types of riders: 
+
+1) **casual riders** (those who buy single-ride or full-day passes), and 
+2) **annual members a.k.a. Cyclistic members**. 
+
+The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of marketing) and the Cyclistic finance analysts have concluded that that annual members are more profitable than casual riders. Before this, Cyclistic have focused on building general awareness and appealing to broad consumer segments.
 
 Currently 8 percent of riders use assistive options (e.g. reclining bikes, hand tricycles, and cargo bikes) while the rest use traditional bikes. Those who use traditional bikes are more likely to be casual riders, but about 30 percent of them use the service to commute to work each day.
 
 Of the the following three questions that will guide the larger scope of the future marketing program, this report will only answer the first question:
 
-- <mark>**How do annual members and casual riders use Cyclistic bikes differently?** </mark>
-- Why would casual riders buy Cyclistic annual memberships?
-- How can Cyclistic use digital media to influence casual riders to become annual members?
+* <mark>**How do annual members and casual riders use Cyclistic bikes differently?** </mark>
+* Why would casual riders buy Cyclistic annual memberships?
+* How can Cyclistic use digital media to influence casual riders to become annual members?
 
-The stakeholders are 
-- Lily Moreno, director of marketing and my manager,
-- The Cyclistic marketing analytics team, a team of data analysts of which I am a part of. The team supports the Cyclistic marketing strategy with data. 
-- The Cyclistic executive team the will decide whether to approve the recommended marketing program
+The stakeholders are:
 
-I am using R in R-markdown for data import, cleaning and visualization as well as the final reporting. R-markdown can do all these steps and having everyting in oine place keeps track of the assumptions and steps of the analysis for transparency and reporoducibilty.
+* Lily Moreno, director of marketing and my manager,
+* The Cyclistic marketing analytics team, a team of data analysts of which I am a part of. The team supports the Cyclistic marketing strategy with data. 
+* The Cyclistic executive team the will decide whether to approve the recommended marketing program
 
-# Exploratory data analysis
+# 2.Exploratory data analysis
 
 The dataset that will be used to answer the business task is Cyclstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. The data ranges from 202110 to 202209, using ISO date notation (YYYYMMDD).
+
 ## Load packages
 
 ```{r}
@@ -64,7 +73,7 @@ Using the head function I checked that the headers of each of the dataframes is 
 df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
 ```
 
-## Inspect and clean data
+## Inspecting and cleaning data
 
 The top rows, including headers:
 ```{r}
@@ -97,18 +106,18 @@ Using the function skim_without_charts from the skimr package shows more informa
 
 Due to the missing values for the geographical data, I will have to make changes to the data. Since locations of the stations should correspond to their respective coordinates, I'll see if there is a possibility to to fill the missing stations with the corresponding station name obtained from matching station-coordinate pairs. 
 
-## Cleaning geographical data
-
 ```{r}
 # length(unique(df$column)) gives unique values for the column
-length(unique(df_1$start_station_name))
-length(unique(df_1$start_station_id))
-length(unique(df_1$start_lat))
-length(unique(df_1$start_lng))
-length(unique(df_1$end_station_name))
-length(unique(df_1$end_station_id))
-length(unique(df_1$end_lat))
-length(unique(df_1$end_lng))
+unique_startstationname <- "unique(df_1$start_station_name))"
+unique_startstationid <- length(unique(df_1$start_station_id))
+unique_startstationidlat <- length(unique(df_1$start_lat))
+unique_startstationlng <- length(unique(df_1$start_lng))
+unique_endstationname <- length(unique(df_1$end_station_name))
+unique_endstationid <- length(unique(df_1$end_station_id))
+unique_endstationlat <- length(unique(df_1$end_lat))
+unique_endstationlng <- length(unique(df_1$end_lng))
+
+print("(stri,unique_startstationname)")
 ```
 There's a large difference in the unique values of station names and IDs to the coordinates, meaning that it will be more complicated to couple the two types of data together than to just equate one value to another. Since I haven't yet learned to use geographical data and I don't see a way to connect the geographical coordinates I will put aside this problem for now by removing the missing rows of coordinates and station names and IDs, while keeping in mind that the data is incomplete.
 
@@ -120,43 +129,35 @@ df_nocoordinates <- df_1 %>%
   na.omit(df_nocoordinates)
 ```
 
-
-## Adding columns for time
-Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and calling the new column header 'Total_Time':
+## Adding calculated columns
+Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and calling the new column header 'Total_Time'. I can also remove the columns that won't be used at the same time:
 
 ```{r}
 df_nocoordinates2 <- df_nocoordinates %>%
-  mutate(Total_Time = ended_at - started_at)
+  mutate(Total_Time = ended_at - started_at) %>%
+  select(Rider_ID, Bike_Type, start_station_name, end_station_name, Total_Time, Rider_Type) %>%
+  head()
 ```
 
 This gives a result in seconds which is acceptable.
+
+Looking at the station names I notice that sometimes riders start and end at the same station. By using this information and comparing it with other data we might see a pattern in rider behavior. I'll add one more column to show when the start and end station is the same or not using Boolean logic:
+
 ```{r}
-select(df_nocoordinates2,Total_Time)
+df_nocoordinates3 <- df_nocoordinates2 %>%
+  mutate(Round_Trip = start_station_name == end_station_name) %>%
+  head()
 ```
-
-I can now remove the other columns as they won't be used
-```{r}
-df_nocoordinates3 < df_nocoordinates2 %>%
-  select(Rider_ID, Bike_Type, start_station_name, end_station_name, Total_Time, Rider_Type)
-
-```
-
 
 # Data 
 
 ## Rider Type vs. Bike Type
 
-```{r}
-df_nocoordinates3 %>%
-  select(Rider_Type)
-
-ggplot(data=df_nocoordinates3) + geom_bar(mapping = aes(x=Rider_Type))
-```
 
 ```{r}
   ggplot(data=df_nocoordinates3) + geom_bar(mapping = aes(x=Rider_Type))
 ```
-There are more annaual than casual riders per ride.
+There are more annual than casual riders per ride.
 
 
 ```{r}
@@ -164,7 +165,7 @@ ggplot(data=df_nocoordinates3, mapping = aes(x=Rider_Type)) +
   geom_bar(mapping=aes(fill=Bike_Type)) +
   labs(title="Bike types used by type of rider", x = "Rider Type", y = "Rides")
 ```
-We see that that there are no docked bikes used at all by annaul members.  We also see that the percentage of classic bikes used by members is much greater than it is for casual riders. Casual riders seem to prefer electric bikes over other types of bikes.
+We see that that there are no docked bikes used at all by annual members.  We also see that the percentage of classic bikes used by members is much greater than it is for casual riders. Casual riders seem to prefer electric bikes over other types of bikes.
 
 Some questions that pop up from this first graph are:
 * Why don't any annual members use docked bikes? Are docked bikes available in the areas where they would be used?
@@ -192,9 +193,18 @@ ggplot(data = df_nocoordinates3, mapping = aes(x = Total_Time)) +
 ## Member Type vs. Geographical Location (Starting location)
 ##Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
 
+### Testing assumptions on the data
+In the provided project description, the following figures were stated:
+* Cyclistic have over 5800 bicycles and 600 docking stations
+* The majority of bikers opt for traditional bikes; about 8 percent use assistive options.
+* About 30% use bikes for work.
 
 ## 
 I want to remane the column headers and create calculated columns:
 * Total ride time using started_at and ended_at
 * Determine how many of the riders are 
+
+## Evaluation and concluding remarks
+
+The lack of data on station names (of about 15%) and geographical coordinates (less than 1%) can mean that the results are skewed, especially if the lack of data for these observations are not spread evenly. For example, if there are specific stations that don't show the data, then there could be a significant difference from the reported and actual number of rides in that area.
 
