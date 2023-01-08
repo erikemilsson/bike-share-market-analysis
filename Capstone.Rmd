@@ -35,7 +35,7 @@ The stakeholders are:
 
 * Lily Moreno, director of marketing and my manager,
 * The Cyclistic marketing analytics team, a team of data analysts of which I am a part of. The team supports the Cyclistic marketing strategy with data. 
-* The Cyclistic executive team the will decide whether to approve the recommended marketing program
+* The Cyclistic executive team the will decide if the recommended marketing program is approved.
 
 # 2.Exploratory data analysis
 
@@ -108,16 +108,14 @@ Due to the missing values for the geographical data, I will have to make changes
 
 ```{r}
 # length(unique(df$column)) gives unique values for the column
-unique_startstationname <- "unique(df_1$start_station_name))"
-unique_startstationid <- length(unique(df_1$start_station_id))
-unique_startstationidlat <- length(unique(df_1$start_lat))
-unique_startstationlng <- length(unique(df_1$start_lng))
-unique_endstationname <- length(unique(df_1$end_station_name))
-unique_endstationid <- length(unique(df_1$end_station_id))
-unique_endstationlat <- length(unique(df_1$end_lat))
-unique_endstationlng <- length(unique(df_1$end_lng))
-
-print("(stri,unique_startstationname)")
+length(unique(df_1$start_station_name))
+length(unique(df_1$start_station_id))
+length(unique(df_1$start_lat))
+length(unique(df_1$start_lng))
+length(unique(df_1$end_station_name))
+length(unique(df_1$end_station_id))
+length(unique(df_1$end_lat))
+length(unique(df_1$end_lng))
 ```
 There's a large difference in the unique values of station names and IDs to the coordinates, meaning that it will be more complicated to couple the two types of data together than to just equate one value to another. Since I haven't yet learned to use geographical data and I don't see a way to connect the geographical coordinates I will put aside this problem for now by removing the missing rows of coordinates and station names and IDs, while keeping in mind that the data is incomplete.
 
@@ -130,28 +128,37 @@ df_nocoordinates <- df_1 %>%
 ```
 
 ## Adding calculated columns
-Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and calling the new column header 'Total_Time'. I can also remove the columns that won't be used at the same time:
+Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and calling the new column header 'Total_Time'. Since the result will be expressed in seconds I will change it to minutes by dividing by 60. I will also change the data type to numeric so that it can be used in graphs. I'll change the title of the column to reflect these changes. And I will remove the columns that won't be used at the same time:
 
 ```{r}
 df_nocoordinates2 <- df_nocoordinates %>%
-  mutate(Total_Time = ended_at - started_at) %>%
-  select(Rider_ID, Bike_Type, start_station_name, end_station_name, Total_Time, Rider_Type) %>%
-  head()
+  mutate(Total_Time_Minutes = (ended_at - started_at)/60) %>%
+  select(Rider_ID, Bike_Type, start_station_name, end_station_name, Total_Time_Minutes, Rider_Type)
 ```
 
-This gives a result in seconds which is acceptable.
+```{r}
+df_nocoordinates2$Total_Time_Minutes <- as.numeric(df_nocoordinates2$Total_Time_Minutes)
+```
+
+```{r}
+head(df_nocoordinates2)
+```
 
 Looking at the station names I notice that sometimes riders start and end at the same station. By using this information and comparing it with other data we might see a pattern in rider behavior. I'll add one more column to show when the start and end station is the same or not using Boolean logic:
 
 ```{r}
 df_nocoordinates3 <- df_nocoordinates2 %>%
-  mutate(Round_Trip = start_station_name == end_station_name) %>%
-  head()
+  mutate(Round_Trip = start_station_name == end_station_name)
 ```
+
+```{r}
+head(df_nocoordinates3)
+```
+
 
 # Data 
 
-## Rider Type vs. Bike Type
+## Bike Type
 
 
 ```{r}
@@ -160,10 +167,12 @@ df_nocoordinates3 <- df_nocoordinates2 %>%
 There are more annual than casual riders per ride.
 
 
+
 ```{r}
-ggplot(data=df_nocoordinates3, mapping = aes(x=Rider_Type)) +
-  geom_bar(mapping=aes(fill=Bike_Type)) +
-  labs(title="Bike types used by type of rider", x = "Rider Type", y = "Rides")
+ggplot(data = df_nocoordinates3) +
+  geom_bar(mapping = aes(x = Rider_Type)) +
+  facet_wrap(~Bike_Type) +
+   labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
 ```
 We see that that there are no docked bikes used at all by annual members.  We also see that the percentage of classic bikes used by members is much greater than it is for casual riders. Casual riders seem to prefer electric bikes over other types of bikes.
 
@@ -171,26 +180,39 @@ Some questions that pop up from this first graph are:
 * Why don't any annual members use docked bikes? Are docked bikes available in the areas where they would be used?
 * Why do casual riders prefer electric bikes?
 
-## Member Type vs. Total Ride Time
+## Total Ride Time
+
+```{r scatterplot}
+ggplot(data = df_nocoordinates3) +
+  geom_point(mapping = aes(x = Total_Time_Minutes, y = Bike_Type)) +
+  facet_wrap(~Rider_Type) + 
+  labs(title="Total time per ride", x = "Minutes", y = "")
+```
+It appears that the ride time doesn't seem to differ much between the members and casual riders for electric and classic bikes, although the range of times for the classic bikes is slightly greater than for electric bikes.
+
+However, the docked bikes (which are only used by casual riders) have a a range of usage times that are much greater than either electric or classic bikes.
 
 ```{r}
-boxplot(df_nocoordinates3$Total_Time)
+ggplot(data = df_nocoordinates3, aes(x = Total_Time_Minutes, y = Round_Trip)) +
+  facet_wrap(~Bike_Type) +
+  geom_point() +
+  labs(title="Total time per ride", x = "Minutes", y = "")
 ```
+
+To get a better sense of the spread of the times are we can put the graph above into a boxplot. The 
 
 ```{r}
-max(df_nocoordinates3$Total_Time)
-```
-
-```{r}
-ggplot(data = df_nocoordinates3, mapping = aes(x = Total_Time)) +
-  geom_histogram()
+# https://ggplot2.tidyverse.org/reference/geom_density.html
+ggplot(data = df_nocoordinates3, aes(Total_Time_Minutes, after_stat(count), fill = Round_Trip)) +
+  geom_density(position = "stack")
 ```
 
 
+## Geographical Location (Starting location)
 
 
-## Member Type vs. Starting Ride time
-## Member Type vs. Geographical Location (Starting location)
+
+
 ##Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
 
 ### Testing assumptions on the data
@@ -202,9 +224,12 @@ In the provided project description, the following figures were stated:
 ## 
 I want to remane the column headers and create calculated columns:
 * Total ride time using started_at and ended_at
-* Determine how many of the riders are 
+* Unique riders for each type. E.g. what 
+* Are there any riders that are using the service as non-members a lot? What are these users doing?
 
-## Evaluation and concluding remarks
+# Evaluation and concluding remarks
 
 The lack of data on station names (of about 15%) and geographical coordinates (less than 1%) can mean that the results are skewed, especially if the lack of data for these observations are not spread evenly. For example, if there are specific stations that don't show the data, then there could be a significant difference from the reported and actual number of rides in that area.
 
+Recommendations:
+* Look into why docked bike users aren't members.
