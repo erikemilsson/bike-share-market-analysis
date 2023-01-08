@@ -141,6 +141,11 @@ df_nocoordinates2$Total_Time_Minutes <- as.numeric(df_nocoordinates2$Total_Time_
 ```
 
 ```{r}
+round(df_nocoordinates2$Total_Time_Minutes, 0)
+```
+
+
+```{r}
 head(df_nocoordinates2)
 ```
 
@@ -155,17 +160,13 @@ df_nocoordinates3 <- df_nocoordinates2 %>%
 head(df_nocoordinates3)
 ```
 
+```{r}
+head(df_nocoordinates4)
+```
 
 # Data 
 
 ## Bike Type
-
-
-```{r}
-  ggplot(data=df_nocoordinates3) + geom_bar(mapping = aes(x=Rider_Type))
-```
-There are more annual than casual riders per ride.
-
 
 
 ```{r}
@@ -174,7 +175,9 @@ ggplot(data = df_nocoordinates3) +
   facet_wrap(~Bike_Type) +
    labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
 ```
-We see that that there are no docked bikes used at all by annual members.  We also see that the percentage of classic bikes used by members is much greater than it is for casual riders. Casual riders seem to prefer electric bikes over other types of bikes.
+First off we see that there are more annual rides than casual rides in total.
+
+We also see that that there are no docked bikes used at all by annual members.  We also see that the percentage of classic bikes used by members is much greater than it is for casual riders. Casual riders seem to prefer electric bikes over other types of bikes.
 
 Some questions that pop up from this first graph are:
 * Why don't any annual members use docked bikes? Are docked bikes available in the areas where they would be used?
@@ -182,7 +185,8 @@ Some questions that pop up from this first graph are:
 
 ## Total Ride Time
 
-```{r scatterplot}
+To get a sense of how the times are scattered we can use a scatterplot:
+```{r}
 ggplot(data = df_nocoordinates3) +
   geom_point(mapping = aes(x = Total_Time_Minutes, y = Bike_Type)) +
   facet_wrap(~Rider_Type) + 
