@@ -108,14 +108,26 @@ Due to the missing values for the geographical data, I will have to make changes
 
 ```{r}
 # length(unique(df$column)) gives unique values for the column
-length(unique(df_1$start_station_name))
-length(unique(df_1$start_station_id))
-length(unique(df_1$start_lat))
-length(unique(df_1$start_lng))
-length(unique(df_1$end_station_name))
-length(unique(df_1$end_station_id))
-length(unique(df_1$end_lat))
-length(unique(df_1$end_lng))
+unique_start_station_name <- length(unique(df_1$start_station_name))
+unique_start_station_id <-length(unique(df_1$start_station_id))
+unique_start_station_lat <- length(unique(df_1$start_lat))
+unique_start_station_lng <- length(unique(df_1$start_lng))
+unique_end_station_name <- length(unique(df_1$end_station_name))
+unique_end_station_id <- length(unique(df_1$end_station_id))
+unique_end_station_lat <- length(unique(df_1$end_lat))
+unique_end_station_lng <- length(unique(df_1$end_lng))
+
+paste("There are",unique_start_station_name, "unique start station names")
+paste("There are",unique_start_station_id, "unique start station ids")
+paste("There are",unique_start_station_lat, "unique start station latitudes")
+paste("There are",unique_start_station_lng, "unique start station longitudes")
+
+paste("There are",unique_end_station_name, "unique end station names")
+paste("There are",unique_end_station_id, "unique end station ids")
+paste("There are",unique_end_station_lat, "unique end station latitudes")
+paste("There are",unique_end_station_lng, "unique end station longitudes")
+
+
 ```
 There's a large difference in the unique values of station names and IDs to the coordinates, meaning that it will be more complicated to couple the two types of data together than to just equate one value to another. Since I haven't yet learned to use geographical data and I don't see a way to connect the geographical coordinates I will put aside this problem for now by removing the missing rows of coordinates and station names and IDs, while keeping in mind that the data is incomplete.
 
