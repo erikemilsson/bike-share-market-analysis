@@ -51,6 +51,7 @@ library(janitor)
 ```
 
 ## Import data and append data
+Import data from october 2021 to September 2022.
 ```{r, message=FALSE, echo=FALSE}
 #read all the CSV files of trip data for the past 12 months as dataframes in R
 df_202110 <- read_csv("202110-divvy-tripdata.csv")
@@ -65,19 +66,18 @@ df_202206 <- read_csv("202206-divvy-tripdata.csv")
 df_202207 <- read_csv("202207-divvy-tripdata.csv")
 df_202208 <- read_csv("202208-divvy-tripdata.csv")
 df_202209 <- read_csv("202209-divvy-publictripdata.csv")
-```
 
-Using the head function I checked that the headers of each of the dataframes is the same, meaning that appending all of them is possible and will make the exploratory data analysis a lot easier since it will only be done once instead of twelve times.
-```{r}
-#appends all the dataframes above into one single dataframe
+#append all months into single dataframe
 df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
 ```
 
 ## Inspecting and cleaning data
 
-The top rows, including headers:
+### First glance of the data
+
 ```{r}
 head(df)
+colnames(df)
 ```
 The headers are made of 13 columns, which contain information such as: 
 * unique rider IDs, 
@@ -85,9 +85,10 @@ The headers are made of 13 columns, which contain information such as:
 * start & end times/station name/ID/coordinates, and
 * type of rider.
 
-The type of rider will mainly be compared to the other variables since the goal is to understand how members and casual riders use Cyclistic bikes differently. 
+At first glance the headers need to be changed to be more descriptive and there are some missing values in the station names and IDs.
 
-We see some missing observations for some of the columns in the head. Using other functions should give more insight into how often they occur and for what columns. But before that we can go ahead and rename the headers in the dataframe to make them more descriptive and cleaner:
+### Rename headers
+
 ```{r}
 df_1 <- df %>% 
   rename(Rider_ID = ride_id) %>%
@@ -95,11 +96,12 @@ df_1 <- df %>%
   rename(Rider_Type = member_casual)
 ```
 
-
+### Missing values
+We see some missing observations for some of the columns in the head. Using the skimr function gives more insight into how often they occur and for what columns.
 ```{r}
 skim_without_charts(df_1)
 ```
-Using the function skim_without_charts from the skimr package shows more information:
+We see the following:
 * There are over 5 million rows
 * Occurances of values in the different rows can be obtained (n_unique). For instance, rideable_type shows that there are three unique types of bikes.
 * There are about 5,000 missing values for end_lat and end_lng and about 1,000,000 missing values for the start/end station name/id. In percentages there is a very high percentage of missing data on for start/end station name & ID (about 15%) but also some missing data for the end coordinates (~0.1%). 
@@ -117,18 +119,20 @@ unique_end_station_id <- length(unique(df_1$end_station_id))
 unique_end_station_lat <- length(unique(df_1$end_lat))
 unique_end_station_lng <- length(unique(df_1$end_lng))
 
-paste("There are",unique_start_station_name, "unique start station names")
-paste("There are",unique_start_station_id, "unique start station ids")
-paste("There are",unique_start_station_lat, "unique start station latitudes")
-paste("There are",unique_start_station_lng, "unique start station longitudes")
+paste("There are",unique_start_station_name, "unique start station names and", unique_end_station_name, "unique end station names")
 
-paste("There are",unique_end_station_name, "unique end station names")
-paste("There are",unique_end_station_id, "unique end station ids")
-paste("There are",unique_end_station_lat, "unique end station latitudes")
-paste("There are",unique_end_station_lng, "unique end station longitudes")
+paste("There are",unique_start_station_id, "unique start station ids and",unique_end_station_id,"unique end station ids")
 
+paste("There are",unique_start_station_lat, "unique start station latitudes and",unique_end_station_lat,"unique end station latitudes")
 
+paste("There are",unique_start_station_lng, "unique end station longitudes and",unique_end_station_lng,"unique start station longitudes")
 ```
+
+```{r}
+ggplot()
+```
+
+
 There's a large difference in the unique values of station names and IDs to the coordinates, meaning that it will be more complicated to couple the two types of data together than to just equate one value to another. Since I haven't yet learned to use geographical data and I don't see a way to connect the geographical coordinates I will put aside this problem for now by removing the missing rows of coordinates and station names and IDs, while keeping in mind that the data is incomplete.
 
 When looking at the unique values I see that there are more unique station names than unique station IDs. This might be something to keep in mind, but for simplicity I will only use the station names.
@@ -153,28 +157,25 @@ df_nocoordinates2$Total_Time_Minutes <- as.numeric(df_nocoordinates2$Total_Time_
 ```
 
 ```{r}
-round(df_nocoordinates2$Total_Time_Minutes, 0)
+df_nocoordinates3 <- round(df_nocoordinates2$Total_Time_Minutes, 0)
 ```
 
-
-```{r}
-head(df_nocoordinates2)
-```
-
-Looking at the station names I notice that sometimes riders start and end at the same station. By using this information and comparing it with other data we might see a pattern in rider behavior. I'll add one more column to show when the start and end station is the same or not using Boolean logic:
-
-```{r}
-df_nocoordinates3 <- df_nocoordinates2 %>%
-  mutate(Round_Trip = start_station_name == end_station_name)
-```
 
 ```{r}
 head(df_nocoordinates3)
 ```
 
+Looking at the station names I notice that sometimes riders start and end at the same station. By using this information and comparing it with other data we might see a pattern in rider behavior. I'll add one more column to show when the start and end station is the same or not using Boolean logic:
+
+```{r}
+df_nocoordinates4 <- df_nocoordinates3 %>%
+  mutate(Round_Trip = start_station_name == end_station_name)
+```
+
 ```{r}
 head(df_nocoordinates4)
 ```
+
 
 # Data 
 
