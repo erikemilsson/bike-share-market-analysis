@@ -90,34 +90,47 @@ At first glance the headers need to be changed to be more descriptive and there 
 ### Rename headers
 
 ```{r}
-df_1 <- df %>% 
+df_renamed <- df %>% 
   rename(Rider_ID = ride_id) %>%
   rename(Bike_Type = rideable_type) %>%
   rename(Rider_Type = member_casual)
 ```
 
 ### Missing values
-We see some missing observations for some of the columns in the head. Using the skimr function gives more insight into how often they occur and for what columns.
+There are missing observations for some of the columns in the head. Using the skimr function gives more insight into how often they occur and for what columns.
 ```{r}
-skim_without_charts(df_1)
+skim_without_charts(df_renamed)
 ```
-We see the following:
-* There are over 5 million rows
-* Occurances of values in the different rows can be obtained (n_unique). For instance, rideable_type shows that there are three unique types of bikes.
-* There are about 5,000 missing values for end_lat and end_lng and about 1,000,000 missing values for the start/end station name/id. In percentages there is a very high percentage of missing data on for start/end station name & ID (about 15%) but also some missing data for the end coordinates (~0.1%). 
+Unique observations:
+* There are over 5,828,235 observations (rows) and the exact same number of unique Rider_IDs, which likely means that the same person will be given a new Rider_ID every time they ride the bike. Renaming Rider_ID to Trip_ID would then make more sense given that this is the case, although in a non-fictional scenario it would be best to double-check this with the Cyclistic marketing analyst team that collect the data.
+* There are 3 unique values (n_unique) for Bike_Type and 2 unique values for Rider_Type.
+```{r}
+df_renamed2 <- df_renamed1 %>% 
+  rename(Trip_ID = Rider_ID)
+```
 
-Due to the missing values for the geographical data, I will have to make changes to the data. Since locations of the stations should correspond to their respective coordinates, I'll see if there is a possibility to to fill the missing stations with the corresponding station name obtained from matching station-coordinate pairs. 
+Missing data:
+* Between 15-17% of the data is missing for the start and end station names and IDs.
+* There is no missing data for start coordinates, but ~0.1% of data is missing for the end coordinates.
+
+Due to the missing values for the geographical data, the data has to be cleaned and since the changes 
+
+
+. Since locations of the stations should correspond to their respective coordinates, I'll see if there is a possibility to to fill the missing stations with the corresponding station name obtained from matching station-coordinate pairs. 
+
+
+
 
 ```{r}
 # length(unique(df$column)) gives unique values for the column
-unique_start_station_name <- length(unique(df_1$start_station_name))
-unique_start_station_id <-length(unique(df_1$start_station_id))
-unique_start_station_lat <- length(unique(df_1$start_lat))
-unique_start_station_lng <- length(unique(df_1$start_lng))
-unique_end_station_name <- length(unique(df_1$end_station_name))
-unique_end_station_id <- length(unique(df_1$end_station_id))
-unique_end_station_lat <- length(unique(df_1$end_lat))
-unique_end_station_lng <- length(unique(df_1$end_lng))
+unique_start_station_name <- length(unique(df_renamed2$start_station_name))
+unique_start_station_id <-length(unique(df_renamed2$start_station_id))
+unique_start_station_lat <- length(unique(df_renamed2$start_lat))
+unique_start_station_lng <- length(unique(df_renamed2$start_lng))
+unique_end_station_name <- length(unique(df_renamed2$end_station_name))
+unique_end_station_id <- length(unique(df_renamed2$end_station_id))
+unique_end_station_lat <- length(unique(df_renamed2$end_lat))
+unique_end_station_lng <- length(unique(df_renamed2$end_lng))
 
 paste("There are",unique_start_station_name, "unique start station names and", unique_end_station_name, "unique end station names")
 
@@ -138,7 +151,7 @@ There's a large difference in the unique values of station names and IDs to the 
 When looking at the unique values I see that there are more unique station names than unique station IDs. This might be something to keep in mind, but for simplicity I will only use the station names.
 
 ```{r}
-df_nocoordinates <- df_1 %>%
+df_nocoordinates <- df_renamed2 %>%
   select(Rider_ID, Bike_Type, start_station_name, end_station_name, started_at, ended_at, Rider_Type) %>%
   na.omit(df_nocoordinates)
 ```
