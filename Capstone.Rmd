@@ -1,5 +1,5 @@
 ---
-title: "Capostone Project"
+title: "Capstone Project"
 author: "Erik Emilsson"
 date: "20 December 2022"
 output: html_document
@@ -12,10 +12,12 @@ knitr::opts_chunk$set(echo = TRUE)
 *This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business. I am using R in R-markdown for data import, cleaning and visualization as well as the final reporting. R-markdown can do all these steps and having everything in one place keeps track of the assumptions and steps of the analysis for transparency and reporoducibilty.*
 
 The project will be split up into three parts:
-1.Business Task
-2.
+1. Business Task Background
+2. Exploration and Cleaning
+3. Data Visualization
 
-# 1.Business task
+
+# 1.Business Task Background
 Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. Currently there are two types of riders: 
 
 1) **casual riders** (those who buy single-ride or full-day passes), and 
@@ -37,7 +39,7 @@ The stakeholders are:
 * The Cyclistic marketing analytics team, a team of data analysts of which I am a part of. The team supports the Cyclistic marketing strategy with data. 
 * The Cyclistic executive team the will decide if the recommended marketing program is approved.
 
-# 2.Exploratory data analysis
+# 2.Exploration and Cleaning
 
 The dataset that will be used to answer the business task is Cyclstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. The data ranges from 202110 to 202209, using ISO date notation (YYYYMMDD).
 
@@ -71,132 +73,78 @@ df_202209 <- read_csv("202209-divvy-publictripdata.csv")
 df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
 ```
 
-## Inspecting and cleaning data
 
-### First glance of the data
+## First glance
 
 ```{r}
 head(df)
 colnames(df)
 ```
-The headers are made of 13 columns, which contain information such as: 
-* unique rider IDs, 
-* Bike type, 
-* start & end times/station name/ID/coordinates, and
-* type of rider.
+The headers are made of 13 columns, which contain information such as unique rider IDs, bike type, start & end times, locations and type of rider. At first glance the headers need to be changed to be more descriptive and there are some missing values in the station names and IDs.
 
-At first glance the headers need to be changed to be more descriptive and there are some missing values in the station names and IDs.
-
-### Rename headers
+## Rename headers
 
 ```{r}
 df_renamed <- df %>% 
-  rename(Rider_ID = ride_id) %>%
+  rename(Ride_ID = ride_id) %>%
   rename(Bike_Type = rideable_type) %>%
   rename(Rider_Type = member_casual)
 ```
 
-### Missing values
+## Inspect Missing and Unique values
 There are missing observations for some of the columns in the head. Using the skimr function gives more insight into how often they occur and for what columns.
 ```{r}
 skim_without_charts(df_renamed)
 ```
-Unique observations:
-* There are over 5,828,235 observations (rows) and the exact same number of unique Rider_IDs, which likely means that the same person will be given a new Rider_ID every time they ride the bike. Renaming Rider_ID to Trip_ID would then make more sense given that this is the case, although in a non-fictional scenario it would be best to double-check this with the Cyclistic marketing analyst team that collect the data.
+### Unique observations:
+* There are 5,828,235 observations (rows under the headers) and the exact same number of unique Ride_IDs, so Ride_IDs can be considered unique identifiers for each row.
 * There are 3 unique values (n_unique) for Bike_Type and 2 unique values for Rider_Type.
-```{r}
-df_renamed2 <- df_renamed1 %>% 
-  rename(Trip_ID = Rider_ID)
-```
 
-Missing data:
-* Between 15-17% of the data is missing for the start and end station names and IDs.
+The skim_without_charts function doesn't show the unique values of coordintes, so this is done here:
+
+```{r}
+#length counts the unique strings output
+paste("There are",length(unique(df_renamed$start_lat)),"and", length(unique(df_renamed$start_lng)), "unique start station latitudes and longitudes.")
+paste("There are",length(unique(df_renamed$end_lat)),"and", length(unique(df_renamed$end_lng)), "unique start station latitudes and longitudes.")
+```
+* Start and end station names and IDs have about 1000-2000 unique values while their respective longitudes and latitudes have about 20000-60000 unique values. Due to the discrepancy it will not be possible to do a one-to-one match the coordinates with station name and ID. By looking at the missing data it should give some ideas as to which columns can be dropped for graphing location data.
+* The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values).
+
+### Missing data:
+* Between 15-17% of the data is missing for the start and end station names and IDs and the missing data for both is identical. Thus, choosing to omit either columns for name or ID should not have any effect on the missing data. I will remove names since IDs have a figure closer to the 600 docks from the case study description.
 * There is no missing data for start coordinates, but ~0.1% of data is missing for the end coordinates.
 
-Due to the missing values for the geographical data, the data has to be cleaned and since the changes 
-
-
-. Since locations of the stations should correspond to their respective coordinates, I'll see if there is a possibility to to fill the missing stations with the corresponding station name obtained from matching station-coordinate pairs. 
-
-
-
+There may be many reasons for why there's missing data, and I will speculate a bit here so I can explain my choice in cleaning. For instance, it could be that there the data wasn't transmitted properly due to bad connections. There might also be missing data because the bike was parked/thrown somewhere "unofficial" at the end of the ride. Whatever the case, the missing data will be of high importance and thus shouldn't be removed to be transparent and to be clear where more or better data collection is be needed for more granular insights into locations.
 
 ```{r}
-# length(unique(df$column)) gives unique values for the column
-unique_start_station_name <- length(unique(df_renamed2$start_station_name))
-unique_start_station_id <-length(unique(df_renamed2$start_station_id))
-unique_start_station_lat <- length(unique(df_renamed2$start_lat))
-unique_start_station_lng <- length(unique(df_renamed2$start_lng))
-unique_end_station_name <- length(unique(df_renamed2$end_station_name))
-unique_end_station_id <- length(unique(df_renamed2$end_station_id))
-unique_end_station_lat <- length(unique(df_renamed2$end_lat))
-unique_end_station_lng <- length(unique(df_renamed2$end_lng))
-
-paste("There are",unique_start_station_name, "unique start station names and", unique_end_station_name, "unique end station names")
-
-paste("There are",unique_start_station_id, "unique start station ids and",unique_end_station_id,"unique end station ids")
-
-paste("There are",unique_start_station_lat, "unique start station latitudes and",unique_end_station_lat,"unique end station latitudes")
-
-paste("There are",unique_start_station_lng, "unique end station longitudes and",unique_end_station_lng,"unique start station longitudes")
+df_nocoordinates <- df_renamed %>%
+  replace_na(list(start_station_id = 'Missing location ID', end_station_id = 'Missing location ID')) %>%
+  select(Ride_ID, Bike_Type, start_station_id, end_station_id, started_at, ended_at, Rider_Type)
 ```
 
-```{r}
-ggplot()
-```
+Now the coordinates columns are gone but the observations have not been removed and hence the number of rows has not been changed.
 
-
-There's a large difference in the unique values of station names and IDs to the coordinates, meaning that it will be more complicated to couple the two types of data together than to just equate one value to another. Since I haven't yet learned to use geographical data and I don't see a way to connect the geographical coordinates I will put aside this problem for now by removing the missing rows of coordinates and station names and IDs, while keeping in mind that the data is incomplete.
-
-When looking at the unique values I see that there are more unique station names than unique station IDs. This might be something to keep in mind, but for simplicity I will only use the station names.
-
-```{r}
-df_nocoordinates <- df_renamed2 %>%
-  select(Rider_ID, Bike_Type, start_station_name, end_station_name, started_at, ended_at, Rider_Type) %>%
-  na.omit(df_nocoordinates)
-```
-
-## Adding calculated columns
-Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and calling the new column header 'Total_Time'. Since the result will be expressed in seconds I will change it to minutes by dividing by 60. I will also change the data type to numeric so that it can be used in graphs. I'll change the title of the column to reflect these changes. And I will remove the columns that won't be used at the same time:
+## Calculate Travel Time
+Now add another column that shows the total time the riders used the bikes for, buy taking the difference between 'started_at' and 'ended_at' and naming the new column header 'Trip_Time_Minutes'. Since the result will be expressed in seconds I will change it to minutes by dividing by 60. I will also change the data type to numeric so that it can be used in graphs. I'll change the title of the column to reflect these changes. And I will remove the columns that won't be used at the same time:
 
 ```{r}
 df_nocoordinates2 <- df_nocoordinates %>%
-  mutate(Total_Time_Minutes = (ended_at - started_at)/60) %>%
-  select(Rider_ID, Bike_Type, start_station_name, end_station_name, Total_Time_Minutes, Rider_Type)
+  mutate(Trip_Time_Minutes = (ended_at - started_at)/60) %>%
+  select(Ride_ID, Bike_Type, start_station_id, end_station_id, Trip_Time_Minutes, Rider_Type)
+
+df_nocoordinates2$Trip_Time_Minutes <- as.numeric(df_nocoordinates2$Trip_Time_Minutes)
+
+#round to nearest minute
+df_nocoordinates2$Trip_Time_Minutes <- round(df_nocoordinates2$Trip_Time_Minutes, 0)
+
+head(df_nocoordinates2)
 ```
-
-```{r}
-df_nocoordinates2$Total_Time_Minutes <- as.numeric(df_nocoordinates2$Total_Time_Minutes)
-```
-
-```{r}
-df_nocoordinates3 <- round(df_nocoordinates2$Total_Time_Minutes, 0)
-```
-
-
-```{r}
-head(df_nocoordinates3)
-```
-
-Looking at the station names I notice that sometimes riders start and end at the same station. By using this information and comparing it with other data we might see a pattern in rider behavior. I'll add one more column to show when the start and end station is the same or not using Boolean logic:
-
-```{r}
-df_nocoordinates4 <- df_nocoordinates3 %>%
-  mutate(Round_Trip = start_station_name == end_station_name)
-```
-
-```{r}
-head(df_nocoordinates4)
-```
-
-
-# Data 
+# 3.Data Analysis and Visualization
 
 ## Bike Type
 
-
 ```{r}
-ggplot(data = df_nocoordinates3) +
+ggplot(data = df_nocoordinates2) +
   geom_bar(mapping = aes(x = Rider_Type)) +
   facet_wrap(~Bike_Type) +
    labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
@@ -209,21 +157,42 @@ Some questions that pop up from this first graph are:
 * Why don't any annual members use docked bikes? Are docked bikes available in the areas where they would be used?
 * Why do casual riders prefer electric bikes?
 
-## Total Ride Time
+## Trip Time
 
 To get a sense of how the times are scattered we can use a scatterplot:
 ```{r}
-ggplot(data = df_nocoordinates3) +
-  geom_point(mapping = aes(x = Total_Time_Minutes, y = Bike_Type)) +
+ggplot(data = df_nocoordinates2) +
+  geom_point(mapping = aes(x = Trip_Time_Minutes, y = Bike_Type)) +
   facet_wrap(~Rider_Type) + 
   labs(title="Total time per ride", x = "Minutes", y = "")
 ```
+Docked bikes seem to be much more spread out than electric and classic bikes in travel time. This should be investigated further. There also appears to be one or more datapoints that are less than 0 for members using electric bikes. These points will be removed:
+```{r}
+df_nocoordinates3 <- df_nocoordinates2[df_nocoordinates2$Trip_Time_Minutes < 0, ] 
+skim_without_charts(df_nocoordinates3)
+```
+To show off the statistical
+
+```{r}
+df_nocoordinates3 %>%
+  filter(Bike_Type=="docked_bike") %>%
+  ggplot(aes(x=Trip_Time_Minutes, y=Bike_Type)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=2,
+                outlier.size=1) +
+  coord_flip() #rotate
+```
+```{r}
+df_nocoordinates3 %>%
+  filter(Bike_Type %in% c("electric bike","classic_bike")) %>%
+  ggplot(aes(x=Trip_Time_Minutes, y=Bike_Type)) + facet_wrap(~ Trip_Time_Minutes)
+```
+
 It appears that the ride time doesn't seem to differ much between the members and casual riders for electric and classic bikes, although the range of times for the classic bikes is slightly greater than for electric bikes.
 
 However, the docked bikes (which are only used by casual riders) have a a range of usage times that are much greater than either electric or classic bikes.
 
 ```{r}
-ggplot(data = df_nocoordinates3, aes(x = Total_Time_Minutes, y = Round_Trip)) +
+ggplot(data = df_nocoordinates3, aes(x = Trip_Time_Minutes, y = Round_Trip)) +
   facet_wrap(~Bike_Type) +
   geom_point() +
   labs(title="Total time per ride", x = "Minutes", y = "")
@@ -233,17 +202,34 @@ To get a better sense of the spread of the times are we can put the graph above 
 
 ```{r}
 # https://ggplot2.tidyverse.org/reference/geom_density.html
-ggplot(data = df_nocoordinates3, aes(Total_Time_Minutes, after_stat(count), fill = Round_Trip)) +
+ggplot(data = df_nocoordinates3, aes(Trip_Time_Minutes, after_stat(count), fill = Round_Trip)) +
   geom_density(position = "stack")
+```
+
+
+
+```{r group and summarize}
+hotel_summary <- 
+  hotel_bookings %>%
+  group_by(hotel) %>%
+  summarise(average_lead_time=mean(lead_time),
+            min_lead_time=min(lead_time),
+            max_lead_time=max(lead_time))
 ```
 
 
 ## Geographical Location (Starting location)
 
 
+## Round Trips
+Looking at the station names I notice that sometimes riders start and end at the same station. By using this information and comparing it with other data we might see a pattern in rider behavior. I'll add one more column to show when the start and end station is the same or not using Boolean logic:
+
+```{r}
+length(which(df_nocoordinates2$start_station_id == df_nocoordinates2$end_station_id))
+```
 
 
-##Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
+## Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
 
 ### Testing assumptions on the data
 In the provided project description, the following figures were stated:
@@ -251,15 +237,11 @@ In the provided project description, the following figures were stated:
 * The majority of bikers opt for traditional bikes; about 8 percent use assistive options.
 * About 30% use bikes for work.
 
-## 
-I want to remane the column headers and create calculated columns:
-* Total ride time using started_at and ended_at
-* Unique riders for each type. E.g. what 
-* Are there any riders that are using the service as non-members a lot? What are these users doing?
-
 # Evaluation and concluding remarks
 
 The lack of data on station names (of about 15%) and geographical coordinates (less than 1%) can mean that the results are skewed, especially if the lack of data for these observations are not spread evenly. For example, if there are specific stations that don't show the data, then there could be a significant difference from the reported and actual number of rides in that area.
 
-Recommendations:
+Recommendations for further analysis:
 * Look into why docked bike users aren't members.
+* Collect data on the behavior of specific users as well, not only per ride. Tracking individuals can give more insight into how the users use the bikes.
+* Look into why there is missing data and if there is more than one reason for the 15% that don't show up in station names & IDs.
