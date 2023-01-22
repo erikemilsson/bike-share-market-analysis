@@ -41,11 +41,11 @@ The stakeholders are:
 
 # 2.Exploration and Cleaning
 
-The dataset that will be used to answer the business task is Cyclstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. The data ranges from 202110 to 202209, using ISO date notation (YYYYMMDD).
+The dataset that will be used to answer the business task is Cycilstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. The data ranges from 202110 to 202209, using ISO date notation (YYYYMMDD).
 
 ## Load packages
 
-```{r}
+```{r warning=FALSE}
 #import package(s)
 library(tidyverse)
 library(skimr)
@@ -54,7 +54,7 @@ library(janitor)
 
 ## Import data and append data
 Import data from october 2021 to September 2022.
-```{r, message=FALSE, echo=FALSE}
+```{r include=FALSE}
 #read all the CSV files of trip data for the past 12 months as dataframes in R
 df_202110 <- read_csv("202110-divvy-tripdata.csv")
 df_202111 <- read_csv("202111-divvy-tripdata.csv")
@@ -78,7 +78,6 @@ df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_
 
 ```{r}
 head(df)
-colnames(df)
 ```
 The headers are made of 13 columns, which contain information such as unique rider IDs, bike type, start & end times, locations and type of rider. At first glance the headers need to be changed to be more descriptive and there are some missing values in the station names and IDs.
 
@@ -107,6 +106,18 @@ The skim_without_charts function doesn't show the unique values of coordintes, s
 paste("There are",length(unique(df_renamed$start_lat)),"and", length(unique(df_renamed$start_lng)), "unique start station latitudes and longitudes.")
 paste("There are",length(unique(df_renamed$end_lat)),"and", length(unique(df_renamed$end_lng)), "unique start station latitudes and longitudes.")
 ```
+```{r}
+df_renamed %>%
+  group_by(Bike_Type, Rider_Type) %>%
+  summarise("Unique start station latitudes" = n_distinct(start_lat), "Unique start station longitudes" = n_distinct(start_lng), "Unique end station latitudes" = n_distinct(end_lat), "Unique end station longitudes" = n_distinct(end_lng)) %>% 
+  mutate(Xaxis = str(Bike_Type), .before = 1)
+  
+  # ggplot() +
+  # geom_bar(mapping = aes(x = Rider_Type)) +
+  # facet_wrap(~Bike_Type)
+```
+
+
 * Start and end station names and IDs have about 1000-2000 unique values while their respective longitudes and latitudes have about 20000-60000 unique values. Due to the discrepancy it will not be possible to do a one-to-one match the coordinates with station name and ID. By looking at the missing data it should give some ideas as to which columns can be dropped for graphing location data.
 * The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values).
 
@@ -137,25 +148,37 @@ df_nocoordinates2$Trip_Time_Minutes <- as.numeric(df_nocoordinates2$Trip_Time_Mi
 #round to nearest minute
 df_nocoordinates2$Trip_Time_Minutes <- round(df_nocoordinates2$Trip_Time_Minutes, 0)
 
-head(df_nocoordinates2)
+glimpse(df_nocoordinates2)
 ```
 # 3.Data Analysis and Visualization
 
 ## Bike Type
 
+Visualize the counts of rides by bike type and member/casual(non-member):
 ```{r}
 ggplot(data = df_nocoordinates2) +
   geom_bar(mapping = aes(x = Rider_Type)) +
   facet_wrap(~Bike_Type) +
    labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
 ```
-First off we see that there are more annual rides than casual rides in total.
-
-We also see that that there are no docked bikes used at all by annual members.  We also see that the percentage of classic bikes used by members is much greater than it is for casual riders. Casual riders seem to prefer electric bikes over other types of bikes.
+Some observations of the graph:
+* There are more rides from members than rides by casual riders in total.
+* Casual riders seem to prefer electric bikes over classic bikes while it is the opposite for members. However, the difference is not substantial.
+* Classic bikes are used much more by members than by casual riders. Electric bikes are used about the same amount by members and casual riders.
+* Docked bikes were not used at all by members.
+* Docked bikes are used much less than any other type of bike.
 
 Some questions that pop up from this first graph are:
-* Why don't any annual members use docked bikes? Are docked bikes available in the areas where they would be used?
-* Why do casual riders prefer electric bikes?
+* Why don't any annual members use docked bikes at all? Are docked bikes available in the areas where they would be used? What percentage of rides are using docked bikes?
+* Why do casual riders prefer electric bikes and members prefer classic bikes?
+
+```{r}
+#percentage of riders using docked bikes
+summarize(df_nocoordinates2,)
+
+#total ride time per category
+```
+
 
 ## Trip Time
 
@@ -166,12 +189,51 @@ ggplot(data = df_nocoordinates2) +
   facet_wrap(~Rider_Type) + 
   labs(title="Total time per ride", x = "Minutes", y = "")
 ```
-Docked bikes seem to be much more spread out than electric and classic bikes in travel time. This should be investigated further. There also appears to be one or more datapoints that are less than 0 for members using electric bikes. These points will be removed:
+Docked bikes seem to include times that are much greater (0-40,000minutes) than electric and classic bikes (0-2,000minutes) in travel time. This should be investigated further. There also appears to be one or more datapoints that is/are less than 0 for members using electric bikes. These points need to be removed:
 ```{r}
-df_nocoordinates3 <- df_nocoordinates2[df_nocoordinates2$Trip_Time_Minutes < 0, ] 
-skim_without_charts(df_nocoordinates3)
+paste("There are",sum(df_nocoordinates2$Trip_Time_Minutes < 0),"rows with trip times below 0 minutes.")
+
+#remove observations with values of trip times below 0 minutes
+df_nocoordinates3 <- df_nocoordinates2[df_nocoordinates2$Trip_Time_Minutes > 0, ]
+  
+glimpse(df_nocoordinates3)
 ```
-To show off the statistical
+
+To get some stats on the trip time I'll do some 
+* Average travel time for each bike type and membership type
+* Min max och each travel time for each bike type and membership type
+
+```{r}
+#percentage of riders using docked bikes
+df_nocoordinates3 %>%
+  group_by("Rider Type" = Rider_Type,"Bike Type" = Bike_Type) %>%
+  summarise(mean = mean(Trip_Time_Minutes), n= n()) %>% 
+  mutate("Ride Time in Years" = mean*n/60/24/365) %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Rider_Type)) +
+  facet_wrap(~Bike_Type)
+```
+
+## Docked bike users
+
+Next I want to look specifically the riding behavior of the riders of docked bikes that ride for a "long" time, arbitrarily chosen to be over 2,000minutes or about 30 minutes, which is close to the maximum trip time for any other bike.
+
+```{r}
+df_nocoordinates3_dockedhigh <- df_nocoordinates3[df_nocoordinates3$Trip_Time_Minutes > 20000, ]
+
+df_nocoordinates3_dockedhigh %>% 
+  filter(Bike_Type=="docked_bike") %>%
+  ggplot(aes(start_station_id)) + geom_bar(aes(fill=start_station_id))
+
+df_nocoordinates3_dockedhigh %>% 
+  filter(Bike_Type=="docked_bike") %>%
+  ggplot(aes(end_station_id)) + geom_bar(aes(fill=end_station_id))
+
+```
+
+
+
+
 
 ```{r}
 df_nocoordinates3 %>%
@@ -179,7 +241,8 @@ df_nocoordinates3 %>%
   ggplot(aes(x=Trip_Time_Minutes, y=Bike_Type)) + 
   geom_boxplot(outlier.colour="red", outlier.shape=2,
                 outlier.size=1) +
-  coord_flip() #rotate
+  coord_flip() + 
+  labs(title="Trip time per for docked bikes (casual riders)", x = "Minutes", y = "")
 ```
 ```{r}
 df_nocoordinates3 %>%
@@ -228,6 +291,14 @@ Looking at the station names I notice that sometimes riders start and end at the
 length(which(df_nocoordinates2$start_station_id == df_nocoordinates2$end_station_id))
 ```
 
+## Missing Location data
+
+```{r}
+paste("There are", sum(df_nocoordinates3$start_station_id == "Missing location ID"), "mising start location IDs.")
+paste("There are", sum(df_nocoordinates3$end_station_id == "Missing location ID"), "missing end location IDs.")
+```
+
+The missing data for location IDs appears to be spread evenly between start and end locations.
 
 ## Additionally I would also like to plot Member Type vs. Total rides this year, by counting the 
 
@@ -242,6 +313,8 @@ In the provided project description, the following figures were stated:
 The lack of data on station names (of about 15%) and geographical coordinates (less than 1%) can mean that the results are skewed, especially if the lack of data for these observations are not spread evenly. For example, if there are specific stations that don't show the data, then there could be a significant difference from the reported and actual number of rides in that area.
 
 Recommendations for further analysis:
-* Look into why docked bike users aren't members.
+* Look into why docked bike users aren't members. Like: why don't any annual members use docked bikes? Are memberships available for riders of docked bikes and/or are the riders aware of the memberships?
+* See why some docked bike rides are up to 40000minutes long (almost 10 days). These riders are likely more intersted in a membership because they're paying a lot for the rentals by only being casual riders.
 * Collect data on the behavior of specific users as well, not only per ride. Tracking individuals can give more insight into how the users use the bikes.
 * Look into why there is missing data and if there is more than one reason for the 15% that don't show up in station names & IDs.
+* Why do casual riders prefer electric bikes and members prefer classic bikes? Perform a questionaire to capture what casual members are drawn to regarding electric bikes and if there is anything Cyclistic can do to make a membership more palatable from their answers.
