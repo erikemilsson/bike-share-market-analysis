@@ -7,6 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(skimr)
+library(janitor)
+library(reshape)#dataframe manipulation
 ```
 
 *This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business. I am using R in R-markdown for data import, cleaning and visualization as well as the final reporting. R-markdown can do all these steps and having everything in one place keeps track of the assumptions and steps of the analysis for transparency and reporoducibilty.*
@@ -39,22 +44,14 @@ The stakeholders are:
 * The Cyclistic marketing analytics team, a team of data analysts of which I am a part of. The team supports the Cyclistic marketing strategy with data. 
 * The Cyclistic executive team the will decide if the recommended marketing program is approved.
 
-# 2.Exploration and Cleaning
+# 2. Data Import
+
 
 The dataset that will be used to answer the business task is Cycilstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. The data ranges from 202110 to 202209, using ISO date notation (YYYYMMDD).
 
-## Load packages
-
-```{r warning=FALSE}
-#import package(s)
-library(tidyverse)
-library(skimr)
-library(janitor)
-```
-
 ## Import data and append data
 Import data from october 2021 to September 2022.
-```{r include=FALSE}
+```{r Data Import, include=FALSE}
 #read all the CSV files of trip data for the past 12 months as dataframes in R
 df_202110 <- read_csv("202110-divvy-tripdata.csv")
 df_202111 <- read_csv("202111-divvy-tripdata.csv")
@@ -73,13 +70,15 @@ df_202209 <- read_csv("202209-divvy-publictripdata.csv")
 df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
 ```
 
+# 3.Exploration and Cleaning
+
 
 ## First glance
 
 ```{r}
 head(df)
 ```
-The headers are made of 13 columns, which contain information such as unique rider IDs, bike type, start & end times, locations and type of rider. At first glance the headers need to be changed to be more descriptive and there are some missing values in the station names and IDs.
+The dataframe headers are in 13 columns, which contain information such as unique rider IDs, bike type, start & end times, locations and type of rider. At first glance the headers need to be changed to be more descriptive and there are some missing values in the station names and IDs.
 
 ## Rename headers
 
@@ -91,11 +90,14 @@ df_renamed <- df %>%
 ```
 
 ## Inspect Missing and Unique values
-There are missing observations for some of the columns in the head. Using the skimr function gives more insight into how often they occur and for what columns.
+
+There are missing observations for some of the columns in the head. Skimr  more information about missing values and also unique values for each column.
 ```{r}
 skim_without_charts(df_renamed)
 ```
+
 ### Unique observations:
+
 * There are 5,828,235 observations (rows under the headers) and the exact same number of unique Ride_IDs, so Ride_IDs can be considered unique identifiers for each row.
 * There are 3 unique values (n_unique) for Bike_Type and 2 unique values for Rider_Type.
 
@@ -106,17 +108,18 @@ The skim_without_charts function doesn't show the unique values of coordintes, s
 paste("There are",length(unique(df_renamed$start_lat)),"and", length(unique(df_renamed$start_lng)), "unique start station latitudes and longitudes.")
 paste("There are",length(unique(df_renamed$end_lat)),"and", length(unique(df_renamed$end_lng)), "unique start station latitudes and longitudes.")
 ```
+
+
 ```{r}
 df_renamed %>%
   group_by(Bike_Type, Rider_Type) %>%
-  summarise("Unique start station latitudes" = n_distinct(start_lat), "Unique start station longitudes" = n_distinct(start_lng), "Unique end station latitudes" = n_distinct(end_lat), "Unique end station longitudes" = n_distinct(end_lng)) %>% 
-  mutate(Xaxis = str(Bike_Type), .before = 1)
-  
-  # ggplot() +
-  # geom_bar(mapping = aes(x = Rider_Type)) +
-  # facet_wrap(~Bike_Type)
+  summarise("Start station latitudes" = n_distinct(start_lat), "Start station longitudes" = n_distinct(start_lng), "End station latitudes" = n_distinct(end_lat), "End station longitudes" = n_distinct(end_lng)) %>%
+gather(Bike_Type, value, "Start station latitudes", "Start station longitudes", "End station latitudes", "End station longitudes") %>% #unpivots chart
+  ggplot(mapping = aes(x = Rider_Type, y=value)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Bike_Type) +
+  labs(title="Unique Values for geographical cooridnates", x = "", y = "Count of unique values")
 ```
-
 
 * Start and end station names and IDs have about 1000-2000 unique values while their respective longitudes and latitudes have about 20000-60000 unique values. Due to the discrepancy it will not be possible to do a one-to-one match the coordinates with station name and ID. By looking at the missing data it should give some ideas as to which columns can be dropped for graphing location data.
 * The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values).
@@ -155,11 +158,11 @@ glimpse(df_nocoordinates2)
 ## Bike Type
 
 Visualize the counts of rides by bike type and member/casual(non-member):
-```{r}
+```{r Bike Type}
 ggplot(data = df_nocoordinates2) +
   geom_bar(mapping = aes(x = Rider_Type)) +
   facet_wrap(~Bike_Type) +
-   labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
+  labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
 ```
 Some observations of the graph:
 * There are more rides from members than rides by casual riders in total.
@@ -206,14 +209,15 @@ To get some stats on the trip time I'll do some
 ```{r}
 #percentage of riders using docked bikes
 df_nocoordinates3 %>%
-  group_by("Rider Type" = Rider_Type,"Bike Type" = Bike_Type) %>%
+  group_by(Rider_Type, Bike_Type) %>%
   summarise(mean = mean(Trip_Time_Minutes), n= n()) %>% 
-  mutate("Ride Time in Years" = mean*n/60/24/365) %>% 
-  ggplot() +
-  geom_bar(mapping = aes(x = Rider_Type)) +
-  facet_wrap(~Bike_Type)
+  mutate(Ride_time_in_years = mean*n/60/24/365) %>%
+  ggplot(mapping = aes(x = Rider_Type, y = Ride_time_in_years)) +
+  geom_bar(stat= "identity") +
+  facet_wrap(~Bike_Type) +
+  labs(title="Total Ride Time of All Riders", x = "", y = "Years")
 ```
-
+This shows that although there aren't as many docked bikes as other types of bikes, the total annual ride time is in the same ballpark.
 ## Docked bike users
 
 Next I want to look specifically the riding behavior of the riders of docked bikes that ride for a "long" time, arbitrarily chosen to be over 2,000minutes or about 30 minutes, which is close to the maximum trip time for any other bike.
@@ -228,7 +232,6 @@ df_nocoordinates3_dockedhigh %>%
 df_nocoordinates3_dockedhigh %>% 
   filter(Bike_Type=="docked_bike") %>%
   ggplot(aes(end_station_id)) + geom_bar(aes(fill=end_station_id))
-
 ```
 
 
@@ -255,7 +258,7 @@ It appears that the ride time doesn't seem to differ much between the members an
 However, the docked bikes (which are only used by casual riders) have a a range of usage times that are much greater than either electric or classic bikes.
 
 ```{r}
-ggplot(data = df_nocoordinates3, aes(x = Trip_Time_Minutes, y = Round_Trip)) +
+ggplot(data = df_nocoordinates3, aes(x = Trip_Time_Minutes)) +
   facet_wrap(~Bike_Type) +
   geom_point() +
   labs(title="Total time per ride", x = "Minutes", y = "")
@@ -265,7 +268,7 @@ To get a better sense of the spread of the times are we can put the graph above 
 
 ```{r}
 # https://ggplot2.tidyverse.org/reference/geom_density.html
-ggplot(data = df_nocoordinates3, aes(Trip_Time_Minutes, after_stat(count), fill = Round_Trip)) +
+ggplot(data = df_nocoordinates3, aes(Trip_Time_Minutes, after_stat(count)) +
   geom_density(position = "stack")
 ```
 
@@ -314,7 +317,7 @@ The lack of data on station names (of about 15%) and geographical coordinates (l
 
 Recommendations for further analysis:
 * Look into why docked bike users aren't members. Like: why don't any annual members use docked bikes? Are memberships available for riders of docked bikes and/or are the riders aware of the memberships?
-* See why some docked bike rides are up to 40000minutes long (almost 10 days). These riders are likely more intersted in a membership because they're paying a lot for the rentals by only being casual riders.
+* See why some docked bike rides are up to 40,000minutes long (almost 10 days). These riders are likely more intersted in a membership because they're paying a lot for the rentals by only being casual riders.
 * Collect data on the behavior of specific users as well, not only per ride. Tracking individuals can give more insight into how the users use the bikes.
 * Look into why there is missing data and if there is more than one reason for the 15% that don't show up in station names & IDs.
 * Why do casual riders prefer electric bikes and members prefer classic bikes? Perform a questionaire to capture what casual members are drawn to regarding electric bikes and if there is anything Cyclistic can do to make a membership more palatable from their answers.
