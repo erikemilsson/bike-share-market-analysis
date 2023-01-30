@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(skimr)
 library(janitor)
+library(lubridate)
 #library(reshape)#dataframe manipulation
 ```
 
@@ -72,7 +73,9 @@ Now to rename the headers:
 df_1 <- df %>% 
   rename(Ride_ID = ride_id) %>%
   rename(Bike_Type = rideable_type) %>%
-  rename(Rider_Type = member_casual)
+  rename(Rider_Type = member_casual) %>% 
+  rename(Start_Time = started_at) %>% 
+  rename(End_Time = ended_at)
 ```
 
 Now to inspect some values. There are missing observations for some of the columns in the head, so lets use a function that gives more information about missing values and also unique values for each column.
@@ -83,11 +86,10 @@ From the output we see, regarding the unique observations:
 * There are 5,828,235 observations (rows under the headers) and Ride_IDs are unique for each row.
 * There are 3 unique values for Bike_Type and 2 unique values for Rider_Type.
 * Start and end station names and IDs have about 1000-2000 unique values.
-* The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values).
+* The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values). Street name
 
 We also see for the missing data:
 * Between 15-17% of the data is missing for the start and end station names and IDs and the missing data for both is identical. Thus, choosing to omit either columns for name or ID should not have any effect on the missing data. I will remove names since IDs have a figure closer to the 600 docks from the case study description.
-
 ```{r Replace 'NA's with 'Missing location ID'}
 df_2 <- df_1 %>%
   replace_na(list(start_station_id = 'Missing location ID', end_station_id = 'Missing location ID')) %>%
@@ -98,11 +100,14 @@ There may be many reasons for why there's missing data, and I will speculate a b
 
 Finally to calculate travel time... I'll add another column that shows the total time the riders used the bikes for in days, by taking the difference between 'started_at' and 'ended_at' and naming the new column header 'Trip_Time_Days'.
 ```{r Add Trip time column}
-df_2$Trip_Time_Days <- as.Date(df_2$started_at) - as.Date(df_2$ended_at)
-skim_without_charts(df_2)
+as.duration((df_2$Trip_Time_Days),"minutes") <- as.Date(df_2$Start_Time) - as.Date(df_2$End_Time)
+#skim_without_charts(df_2)
+
+# df2 %>% 
+# mutate(Start_Time - End_Time)
 ```
 
-Docked bikes seem to include times that are much greater than electric and classic bikes in travel time ,so this will be investigated further. There also appears to be some days are less than 0 for members using electric bikes so these will be removed.
+There also appears to be some days are less than 0 for members using electric bikes so these will be removed.
 ```{r}
 paste(sum(df_2$Trip_Time_Days < 0),"rows with trip times below 0 days have been removed.")
 df_clean <- df_2[df_2$Trip_Time_Days >= 0, ] #removes values below 0 days
@@ -139,18 +144,18 @@ To get some stats on the trip time I'll do some
 
 ```{r message=FALSE}
 #percentage of riders using docked bikes
-df_clean %>%
-  group_by(Rider_Type, Bike_Type) %>%
-  summarise(mean = mean(Trip_Time_Days), n= n()) %>% 
-  mutate(Trip_time_in_years = mean*n) %>%
-  View()
-  
-  # ggplot(mapping = aes(x = Rider_Type, y = Trip_time_in_years)) +
-  # geom_bar(stat= "identity") +
-  # facet_wrap(~Bike_Type) +
-  # labs(title="Total Ride Time of All Riders", x = "", y = "Days")
+# df_clean %>%
+#   group_by(Rider_Type, Bike_Type) %>%
+#   summarise(mean = mean(Trip_Time_Days), n= n()) %>% 
+#   ggplot(mapping = aes(x = Rider_Type, y = mean)) +
+#   geom_bar(stat= "identity") +
+#   facet_wrap(~Bike_Type) +
+#   labs(title="Total Ride Time of All Riders", x = "", y = "Mean")
 ```
 This shows that although there aren't as many docked bikes as other types of bikes, the total annual ride time is in the same ballpark.
+
+
+Docked bikes seem to include times that are much greater than electric and classic bikes in travel time, so this will be investigated further.
 
 ## 4c. How do docked bike users use the bikes?
 
