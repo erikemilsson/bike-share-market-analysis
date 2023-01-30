@@ -27,6 +27,7 @@ The project will be split up into three parts:
 4a. How are the different bike types used by members and non-members?
 4b. How is the trip time different for members and non-members?
 4c. How do docked bike users use the bikes?
+4d. When do the different user use the bike throughout the year?
 5. Conclusion
 
 # 1.Business Task Background
@@ -53,27 +54,9 @@ The stakeholders are:
 
 # 2. Data Import
 
-The dataset that will be used to answer the business task is Cycilstic's historical trip data for the previous 12 months. The dataset was downloaded in a zip file with a folder for each month, each containing data in CSV-format. The data ranges from october 2021 to September 2022, using ISO date notation (YYYYMMDD). The data is imported into R and then append into one dataframe.
+The dataset that will be used to answer the business task is Cycilstic's historical trip data for the previous 12 months. The dataset was downloaded from the database in a zip file with a folder for each month , each containing data in CSV-format. The data ranges from October 2021 to September 2022, using ISO date notation (YYYYMMDD). All the datasheets were uploaded into BigQuery from a Google Drive location, and were appended in a single table. The 4 geographical coordinates columns (longitudes and latitudes for start and end stations) were removed as this analysis will not be using them. A CSV file of the results was exported as a CSV file to Google Drive and subsequently imported into R for further cleaning and analysis.
 ```{r Data Import, include=FALSE}
-#read all the CSV files of trip data for the past 12 months as dataframes in R
-df_202110 <- read_csv("202110-divvy-tripdata.csv")
-df_202111 <- read_csv("202111-divvy-tripdata.csv")
-df_202112 <- read_csv("202112-divvy-tripdata.csv")
-df_202201 <- read_csv("202201-divvy-tripdata.csv")
-df_202202 <- read_csv("202202-divvy-tripdata.csv")
-df_202203 <- read_csv("202203-divvy-tripdata.csv")
-df_202204 <- read_csv("202204-divvy-tripdata.csv")
-df_202205 <- read_csv("202205-divvy-tripdata.csv")
-df_202206 <- read_csv("202206-divvy-tripdata.csv")
-df_202207 <- read_csv("202207-divvy-tripdata.csv")
-df_202208 <- read_csv("202208-divvy-tripdata.csv")
-df_202209 <- read_csv("202209-divvy-publictripdata.csv")
-
-#append all months into single dataframe
-df <- rbind(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
-
-#remove unused dataframes to free up memory
-rm(df_202110, df_202111,df_202112, df_202201, df_202202, df_202203, df_202204, df_202205, df_202206, df_202207, df_202208, df_202209)
+df <- read_csv("202110-202209_AppendedData.csv", show_col_types = FALSE)
 ```
 
 # 3.Exploration and Cleaning
@@ -82,7 +65,7 @@ For the first glance at the header and the first few rows of data:
 ```{r}
 head(df)
 ```
-The data from the CSV files has 13 columns from the start, which contain information such as unique rider IDs, bike type, start & end times, locations and type of rider. At first glance the headers need to be changed to be more descriptive and there are missing values in the station names and IDs that need to be considered.
+The data from the CSV files has 9 columns from the start. At first glance the headers need to be changed to be more descriptive and there are missing values in the station names and IDs that need to be considered.
 
 Now to rename the headers:
 ```{r Rename headers}
@@ -96,72 +79,34 @@ Now to inspect some values. There are missing observations for some of the colum
 ```{r Information about missing and unique values}
 skim_without_charts(df_1)
 ```
-
 From the output we see, regarding the unique observations:
 * There are 5,828,235 observations (rows under the headers) and Ride_IDs are unique for each row.
 * There are 3 unique values for Bike_Type and 2 unique values for Rider_Type.
 * Start and end station names and IDs have about 1000-2000 unique values.
 * The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values).
 
-The skim_without_charts function doesn't show the unique values of coordinates, so this is instead shown in the following graph:
-
-
-``{r Count of unique values of geographical coordinates, message=FALSE}
-df_1 %>%
-  group_by(Bike_Type, Rider_Type) %>%
-  summarise("Start station latitudes" = n_distinct(start_lat), "Start station longitudes" = n_distinct(start_lng), "End station latitudes" = n_distinct(end_lat), "End station longitudes" = n_distinct(end_lng)) %>%
-gather(Bike_Type, value, "Start station latitudes", "Start station longitudes", "End station latitudes", "End station longitudes") %>% #unpivots chart
-  ggplot(mapping = aes(x = Rider_Type, y=value)) +
-  geom_bar(stat = "identity") +
-  facet_wrap(~Bike_Type) +
-  labs(title="Count of unique values of geographical coordinates", x = "", y = "Unique instances")
-```
-We see from the graph:
-* Longitudes and latitudes have about 20000-60000 unique values, many more compared to 1000-2000 for start and end station names. 
-
-Due to the discrepancy in unique values between the coordinates and the station names, it will not be possible to do a one-to-one match the two. *By looking at the missing data it should give some ideas as to which columns can be dropped for graphing location data.*
-
-Missing data:
+We also see for the missing data:
 * Between 15-17% of the data is missing for the start and end station names and IDs and the missing data for both is identical. Thus, choosing to omit either columns for name or ID should not have any effect on the missing data. I will remove names since IDs have a figure closer to the 600 docks from the case study description.
-* There is no missing data for start coordinates, but ~0.1% of data is missing for the end coordinates.
-
-There may be many reasons for why there's missing data, and I will speculate a bit here so I can explain my choice in cleaning. For instance, it could be that there the data wasn't transmitted properly due to bad connections. There might also be missing data because the bike was parked/thrown somewhere "unofficial" at the end of the ride. Whatever the case, the missing data will be of high importance and thus shouldn't be removed to be transparent and to be clear where more or better data collection is be needed for more granular insights into locations.
 
 ```{r Replace 'NA's with 'Missing location ID'}
 df_2 <- df_1 %>%
   replace_na(list(start_station_id = 'Missing location ID', end_station_id = 'Missing location ID')) %>%
-  select(Ride_ID, Bike_Type, start_station_id, end_station_id, started_at, ended_at, Rider_Type)
+  replace_na(list(start_station_id = 'Missing location Name', end_station_id = 'Missing location Name'))
 ```
 
-Now the coordinates columns are gone but the observations have not been removed and hence the number of rows has not been changed.
+There may be many reasons for why there's missing data, and I will speculate a bit here so I can explain my choice in cleaning. For instance, it could be that there the data wasn't transmitted properly due to bad connections. There might also be missing data because the bike was parked/thrown somewhere "unofficial" at the end of the ride. Whatever the case, the missing data will be of high importance and thus shouldn't be removed to be transparent and to be clear where more or better data collection is be needed for more granular insights into locations.
 
-Finally to calculate travel time... Add another column that shows the total time the riders used the bikes for, by taking the difference between 'started_at' and 'ended_at' and naming the new column header 'Trip_Time_Minutes'. Since the result will be expressed in seconds I will change it to minutes by dividing by 60. I will also change the data type to numeric so that it can be used in graphs. I'll change the title of the column to reflect these changes. And I will remove the columns that won't be used at the same time:
+Finally to calculate travel time... I'll add another column that shows the total time the riders used the bikes for in days, by taking the difference between 'started_at' and 'ended_at' and naming the new column header 'Trip_Time_Days'.
 ```{r Add Trip time column}
-df_3 <- df_2 %>%
-  mutate(Trip_Time_Minutes = (ended_at - started_at)/60) %>%
-  select(Ride_ID, Bike_Type, start_station_id, end_station_id, Trip_Time_Minutes, Rider_Type)
-
-df_3$Trip_Time_Minutes <- as.numeric(df_3$Trip_Time_Minutes) #change format of trip time column to numeric 
-
-df_3$Trip_Time_Minutes <- round(df_3$Trip_Time_Minutes, 0) #round to nearest minute
+df_2$Trip_Time_Days <- as.Date(df_2$started_at) - as.Date(df_2$ended_at)
+skim_without_charts(df_2)
 ```
 
-Now to look at the Trip Time more closely:
-```{r Trip time, eval=FALSE, include=FALSE}
-ggplot(data = df_3) +
-  geom_point(mapping = aes(x = Trip_Time_Minutes, y = Bike_Type)) +
-  facet_wrap(~Rider_Type) +
-  labs(title="Total time per ride", x = "Minutes", y = "")
-```
-Docked bikes seem to include times that are much greater (0-40,000minutes) than electric and classic bikes (0-2,000minutes) in travel time. This should be investigated further. 
-
-There also appears to be some datapoints that are less than 0 for members using electric bikes. 
+Docked bikes seem to include times that are much greater than electric and classic bikes in travel time ,so this will be investigated further. There also appears to be some days are less than 0 for members using electric bikes so these will be removed.
 ```{r}
-paste(sum(df_3$Trip_Time_Minutes < 0),"rows with trip times below 0 minutes have been removed.")
-
-df_clean <- df_3[df_3$Trip_Time_Minutes > 0, ]
-
-rm(df,df_1,df_2,df_3) #remove other dataframes to save memory
+paste(sum(df_2$Trip_Time_Days < 0),"rows with trip times below 0 days have been removed.")
+df_clean <- df_2[df_2$Trip_Time_Days >= 0, ] #removes values below 0 days
+rm(df,df_1,df_2) #removes other dataframes to save memory
 ```
 
 # 4. Analyzing the Questions
@@ -170,8 +115,8 @@ rm(df,df_1,df_2,df_3) #remove other dataframes to save memory
 
 Visualize the counts of rides by bike type and member/casual(non-member):
 ```{r Rider type vs Bike type}
-ggplot(data = df_clean) +
-  geom_bar(mapping = aes(x = Rider_Type)) +
+ggplot() +
+  geom_bar(df_clean, mapping = aes(Rider_Type)) +
   facet_wrap(~Bike_Type) +
   labs(title="Bike types used by type of rider", x = "", y = "Count of rides")
 ```
@@ -186,13 +131,6 @@ Some questions that pop up from this first graph are:
 * Why don't any annual members use docked bikes at all? Are docked bikes available in the areas where they would be used? What percentage of rides are using docked bikes?
 * Why do casual riders prefer electric bikes and members prefer classic bikes?
 
-```{r}
-#percentage of riders using docked bikes
-df_clean %>% 
-  summarize(df_clean,)
-
-```
-
 ## 4b. How is the trip time different for members and non-members?
 
 To get some stats on the trip time I'll do some 
@@ -201,14 +139,16 @@ To get some stats on the trip time I'll do some
 
 ```{r message=FALSE}
 #percentage of riders using docked bikes
-df_nocoordinates3 %>%
+df_clean %>%
   group_by(Rider_Type, Bike_Type) %>%
-  summarise(mean = mean(Trip_Time_Minutes), n= n()) %>% 
-  mutate(Ride_time_in_years = mean*n/60/24/365) %>%
-  ggplot(mapping = aes(x = Rider_Type, y = Ride_time_in_years)) +
-  geom_bar(stat= "identity") +
-  facet_wrap(~Bike_Type) +
-  labs(title="Total Ride Time of All Riders", x = "", y = "Years")
+  summarise(mean = mean(Trip_Time_Days), n= n()) %>% 
+  mutate(Trip_time_in_years = mean*n) %>%
+  View()
+  
+  # ggplot(mapping = aes(x = Rider_Type, y = Trip_time_in_years)) +
+  # geom_bar(stat= "identity") +
+  # facet_wrap(~Bike_Type) +
+  # labs(title="Total Ride Time of All Riders", x = "", y = "Days")
 ```
 This shows that although there aren't as many docked bikes as other types of bikes, the total annual ride time is in the same ballpark.
 
@@ -217,7 +157,7 @@ This shows that although there aren't as many docked bikes as other types of bik
 ```{r}
 df_nocoordinates3 %>%
   filter(Bike_Type=="docked_bike") %>%
-  ggplot(aes(x=Trip_Time_Minutes)) + 
+  ggplot(aes(x=Trip_Time_Days)) + 
   geom_histogram(binwidth=1000) +
   labs(title = "Counts of trip times in minutes for docked bikes", x = "Trip times in minutes", y = "Occurances")
 ```
@@ -227,7 +167,7 @@ This histogram tells us that most of the rides are less than about 1000 minutes 
 Next I want to look specifically the riding behavior of the riders of docked bikes that ride for a "long" time, arbitrarily chosen to be over 2,000 minutes or about 33 hours, which is close to the maximum trip time for any other bike.
 
 ```{r}
-df_nocoordinates3_dockedhigh <- df_nocoordinates3[df_nocoordinates3$Trip_Time_Minutes > 20000, ]
+df_nocoordinates3_dockedhigh <- df_nocoordinates3[df_nocoordinates3$Trip_Time_Days > 1, ]
 
 df_nocoordinates3_dockedhigh %>%
   filter(Bike_Type=="docked_bike") %>%
@@ -250,7 +190,7 @@ df_nocoordinates3_dockedhigh %>%
 ```{r}
 df_nocoordinates3 %>%
   filter(Bike_Type %in% c("electric bike","classic_bike")) %>%
-  ggplot(aes(x=Trip_Time_Minutes, y=Bike_Type)) + facet_wrap(~ Trip_Time_Minutes)
+  ggplot(aes(x=Trip_Time_Days, y=Bike_Type)) + facet_wrap(~ Trip_Time_Days)
 ```
 It appears that the ride time doesn't seem to differ much between the members and casual riders for electric and classic bikes, although the range of times for the classic bikes is slightly greater than for electric bikes.
 
