@@ -20,13 +20,14 @@ knitr::opts_chunk$set(echo = TRUE)
 *steps of the analysis for transparency and reporoducibilty.*
 
 The project will be split up into three parts:
-1. Business Task Background
-2. Data Import, Exploration, and Cleaning
-3. Data Analysis
-  3a. How are the different bike types used by members and non-members?
-  3b. How is the trip time different for members and non-members?
-  3c. How are the bikes used throughout the year?
-4. Evaluation and conclusions
+
+1) Business Task Background
+2) Data Import, Exploration, and Cleaning
+3) Data Analysis
+   a) How are the different bike types used by members and non-members?
+   b) How is the trip time different for members and non-members?
+   c) How are the bikes used throughout the year?
+4) Evaluation and conclusions
 
 # 1.Business Task Background
 Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. 
@@ -122,7 +123,7 @@ We also see for the missing data:
   remove names since IDs have a figure closer to the 600 docks from the case 
   study description.
   
-```{r Replace 'NA's with 'Missing location ID'}
+```{r Replace NAs with Missing location IDs}
 df_2 <- df_1 %>%
   replace_na(list(start_station_id = 'Missing location ID', end_station_id = 
                     'Missing location ID')) %>%
