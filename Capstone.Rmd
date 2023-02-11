@@ -220,7 +220,8 @@ This shows that although there aren't as many docked bikes as other types of
 bikes, the total annual ride time is in the same ballpark.
 
 Docked bikes seem to include times that are much greater than electric and 
-classic bikes in travel time, so this will be investigated further in a distribution.
+classic bikes in travel time, so this will be investigated further in a 
+distribution.
 
 ```{r}
 df_clean %>%
@@ -233,11 +234,21 @@ df_clean %>%
   theme(axis.text.y =element_blank(), axis.ticks.y=element_blank())
 ```
 
-The comparison between the trip times for the different bikes shows that the electric and classic bikes are quite similar in trip time distribution while the docked bikes are on average used for longer. In fact, almost no classic and electric bikes are used for longer than 3000 seconds (about 1 hour) while some bike users take trips at up to about 1000 seconds (about 3 hours) or longer. Since all docked bike users are non-members, this is difference in user behavior should be looked at closer.
+The comparison between the trip times for the different bikes shows that the 
+electric and classic bikes are quite similar in trip time distribution while 
+the docked bikes are on average used for longer. In fact, almost no classic 
+and electric bikes are used for longer than 3000 seconds (about 1 hour) while 
+some bike users take trips at up to about 1000 seconds (about 3 hours) or 
+longer. Since all docked bike users are non-members, this is difference in 
+user behavior should be looked at closer.
 
 ## 3c. How are the bikes used throughout the year?
 
-The following graphs will plot the distribution of rides throughout the year, divided into bike types in the first graph and non-member/member in the second graph. Note that the dips in the month of October is due to the cut-off in the data being in that month, hence the October 2021 and October 2022 data should be aggregated to get the "real" value for that month.
+The following graphs will plot the distribution of rides throughout the year, 
+divided into bike types in the first graph and non-member/member in the second 
+graph. Note that the dips in the month of October is due to the cut-off in the 
+data being in that month, hence the October 2021 and October 2022 data should
+be aggregated to get the "real" value for that month.
 ```{r}
 df_clean %>%
   filter(Bike_Type %in% c('classic_bike','docked_bike','electric_bike')) %>% 
@@ -249,7 +260,8 @@ df_clean %>%
 ```
 Bike usage is higher between May-October and lower between September-April.
 
-There is not much difference between what time of year users of different bike types ride bikes except for a dip of relative electric bike usage in June.
+There is not much difference between what time of year users of different bike 
+types ride bikes except for a dip of relative electric bike usage in June.
 
 ```{r}
 df_clean %>%
@@ -261,9 +273,14 @@ df_clean %>%
   theme(axis.text.y =element_blank(), axis.ticks.y=element_blank())
 ```
 
-Members have a more even distribution of usage for throughout the year compared to casual riders. Essentially, the cooler months of September-May casual riders use the service less relative to members while in the warmer months June-October they use the bikes more relative to members. The difference is most extreme in June-August.
+Members have a more even distribution of usage for throughout the year compared 
+to casual riders. Essentially, the cooler months of September-May casual riders 
+use the service less relative to members while in the warmer months June-October 
+they use the bikes more relative to members. The difference is most extreme in
+June-August.
 
-As the summer months are where most casual riders are using the bikes, there could be an opportunity to run campaigns during these months.
+As the summer months are where most casual riders are using the bikes, there 
+could be an opportunity to run campaigns during these months.
 
 ## 4. Evaluation and conclusions
 
