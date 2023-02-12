@@ -63,7 +63,7 @@ The stakeholders are:
   the Cyclistic marketing strategy with data, and
 * The Cyclistic executive team that will decide if the recommended marketing 
   program is approved or not.
-
+  
 # 2. Data Import, Exploration, and Cleaning
 
 The dataset that will be used to answer the business task is Cycilstic's 
@@ -307,3 +307,14 @@ Recommendations for further analysis:
   more palatable from their answers.
 * Run campaigns during the months of heavy casual rider bike use, during 
   the months of June-August.
+  
+  
+# TO DO
+I think I could shorten the text by omitting some things that don't specifically have to do with the business task that I specifically am answering with my analysis. Alternatively use some formatting to make it different from the main text.
+
+I could include the link to the data and be clearer with the problems with the data in a separate section in the Data Import, Exploration, and Cleaning chapter.
+
+I could write an introduction to the analysis phase with how I organized and formatted data for the analysis, including statistical calculations.
+
+I'm most proud of the distribution of trip times, because I felt that it was a simple way of showing that there is a difference for the bike types while also showing how they are different, all in one graph. 
+I think I should look over the graphs again to make sure that the main messages are even clearer by checking the labels again.
