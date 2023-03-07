@@ -1,5 +1,5 @@
 ---
-title: "Capstone Project"
+title: "Case Study: How Does a Bike-Share Navigate Speedy Success?"
 author: "Erik Emilsson"
 date: "20 December 2022"
 output:
@@ -17,24 +17,22 @@ knitr::opts_chunk$set(echo = TRUE)
 *navigate speedy business. I am using R in R-markdown for data import, cleaning*
 *and visualization as well as the final reporting. R-markdown can do all these *
 *steps and having everything in one place keeps track of the assumptions and *
-*steps of the analysis for transparency and reporoducibilty.*
+*steps of the analysis for transparency and reproducibility*
 
-The project will be split up into three parts:
-
+**TABLE OF CONTENTS**
 1) Business Task Background
-2) Data Import, Exploration, and Cleaning
-3) Data Analysis
+2) Importing Libraries, Data Import and Dataset
+3) Data Exploration and Cleaning
+4) Analyzing the Questions
    a) How are the different bike types used by members and non-members?
    b) How is the trip time different for members and non-members?
    c) How are the bikes used throughout the year?
-4) Evaluation and conclusions
+5) Evaluation and conclusions
 
 # 1.Business Task Background
 Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. 
-Currently there are two types of riders: 
-
-1) **casual riders** (those who buy single-ride or full-day passes), and 
-2) **annual members a.k.a. Cyclistic members**. 
+Currently there are two types of riders: 1) **casual riders** (those who buy 
+single-ride or full-day passes), and 2) **annual members a.k.a. Cyclistic members**. 
 
 The goal is to *maximize the number of annual memberships for the company by* 
 *converting more casual riders to annual members*. Lily Moreno (director of 
@@ -64,35 +62,37 @@ The stakeholders are:
 * The Cyclistic executive team that will decide if the recommended marketing 
   program is approved or not.
   
-# 2. Data Import, Exploration, and Cleaning
+# 2. Importing Libraries, Data Import and Dataset
 
-The dataset that will be used to answer the business task is Cycilstic's 
-historical trip data for the previous 12 months. The dataset was downloaded 
-from the database in a zip file with a folder for each month , each containing 
-data in CSV-format. The data ranges from October 2021 to September 2022, using 
-ISO date notation (YYYYMMDD). All the datasheets were uploaded into BigQuery 
-from a Google Drive location, and were appended in a single table. The 4 
-geographical coordinates columns (longitudes and latitudes for start and end 
-stations) were removed as this analysis will not be using them. A CSV file of 
-the results was exported as a CSV file to Google Drive and subsequently 
-imported into R for further cleaning and analysis.
-```{r}
+```{r Import Libraries, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(skimr)
 library(janitor)
 library(lubridate)
 ```
 
+
+The dataset to represent Cyclistic bike share service bike data comes from Divvy, 
+Lyft and Scooters, LLC ("Bikeshare") data. See the licence agreement for more 
+information https://ride.divvybikes.com/data-license-agreement. The past 12 months 
+(October 2021 to September 2022) of historical trip data was downloaded from the 
+database in CSV format to a Google Drive location, and thereafter uploaded to 
+BigQuery. There the 12 files were appended and thereafter exported as a CSV file 
+to be read into this R Markdown report. 
+
+The geographical coordinates columns (longitudes and latitudes for start and end 
+stations) were removed as this analysis will not be using them. 
+
 ```{r Data Import, echo=FALSE, message=FALSE}
 df <- read_csv("202110-202209_AppendedData.csv", show_col_types = FALSE)
 head(df)
 ```
 
-The data from the CSV files has 9 columns from the start. At first glance the 
-headers need to be changed to be more descriptive and there are missing values 
-in the station names and IDs that need to be considered.
+# 3. Data Exploration and Cleaning
 
-```{r Rename headers}
+
+
+```{r Rename headers, echo=FALSE, message=FALSE}
 df_1 <- df %>% 
   rename(Ride_ID = ride_id) %>%
   rename(Bike_Type = rideable_type) %>%
@@ -101,25 +101,45 @@ df_1 <- df %>%
   rename(End_Time = ended_at)
 ```
 
-There are also missing observations for some of the columns in the head. Using 
-a different function allows us to see more information about missing values and 
-also unique values for each column.
-
-```{r Information about missing and unique values}
-skim_without_charts(df_1)
+```{r}
+# There are also missing observations for some of the columns in the head. Using 
+# a different function allows us to see more information about missing values and 
+# also unique values for each column.
+df_skim <- skim_without_charts(df_1)
 ```
-From the output we see, for the unique observations:
-* There are 5,828,235 observations, all with unique Ride_IDs for each row.
+```{r}
+df_skim
+```
+
+
+```{r Information about missing and unique values, echo=FALSE, message=FALSE}
+df_skim %>%
+  ggplot(mapping = aes(x = complete_rate, y = skim_variable)) +
+  geom_bar(stat= "identity") +
+  labs(title="Data completeness per column", x = "Share (0 to 1)", y = "")
+```
+* Between 15-17% of the data is missing for the start and end station names and 
+  IDs. 
+  
+```{r Information about missing and unique values, echo=FALSE, message=FALSE}
+df_skim %>%
+  ggplot(mapping = aes(x = skim_variable, y = n_unique)) +
+  geom_bar(stat= "identity") +
+  labs(title="Unique IDs", x = "Share (0 to 1)", y = "")
+```
+
+From the skim function output the following information about *unique* observations 
+can be seen:
+
+* Each observation (total of 5,828,235) have unique Ride_IDs.
 * There are 3 unique values for Bike_Type and 2 unique values for Rider_Type.
 * Start and end station names and IDs have about 1000-2000 unique values.
 * The unique values of all the locations are much greater than the "over 600 
   docking station" that were stated in the case study description. Start/End 
-  station ID come closest (1302 and 1309 unique values). Street name
+  station ID come closest (1302 and 1309 unique values). 
 
-We also see for the missing data:
-* Between 15-17% of the data is missing for the start and end station names and 
-  IDs and the missing data for both is identical. Thus, choosing to omit either 
-  columns for name or ID should not have any effect on the missing data. I will 
+
+  Thus, choosing to omit either columns for name or ID should not have any effect on the missing data. I will 
   remove names since IDs have a figure closer to the 600 docks from the case 
   study description.
   
@@ -174,9 +194,9 @@ rm(df,df_1,df_2) #removes other dataframes to save memory
 head(df_clean)
 ```
 
-# 3. Analyzing the Questions
+# 4. Analyzing the Questions
 
-## 3a. How are the different bike types used by members and non-members?
+## 4a. How are the different bike types used by members and non-members?
 
 Visualize the counts of rides by bike type and member/casual(non-member):
 ```{r Rider type vs Bike type}
@@ -200,7 +220,7 @@ Some questions that pop up from this first graph are:
   using docked bikes?
 * Why do casual riders prefer electric bikes and members prefer classic bikes?
 
-## 3b. How is the trip time different for members and non-members?
+## 4b. How is the trip time different for members and non-members?
 
 To get some stats on the trip time I'll do some 
 * Average travel time for each bike type and membership type
@@ -242,7 +262,7 @@ some bike users take trips at up to about 1000 seconds (about 3 hours) or
 longer. Since all docked bike users are non-members, this is difference in 
 user behavior should be looked at closer.
 
-## 3c. How are the bikes used throughout the year?
+## 4c. How are the bikes used throughout the year?
 
 The following graphs will plot the distribution of rides throughout the year, 
 divided into bike types in the first graph and non-member/member in the second 
@@ -282,7 +302,7 @@ June-August.
 As the summer months are where most casual riders are using the bikes, there 
 could be an opportunity to run campaigns during these months.
 
-## 4. Evaluation and conclusions
+## 5. Evaluation and conclusions
 
 The lack of data on station names (of about 15%) and geographical coordinates 
 (less than 1%) can mean that the results are skewed, especially if the lack of 
@@ -310,11 +330,18 @@ Recommendations for further analysis:
   
   
 # TO DO
-I think I could shorten the text by omitting some things that don't specifically have to do with the business task that I specifically am answering with my analysis. Alternatively use some formatting to make it different from the main text.
+I think I could shorten the text by omitting some things that don't specifically 
+have to do with the business task that I specifically am answering with my analysis. 
+Alternatively use some formatting to make it different from the main text.
 
-I could include the link to the data and be clearer with the problems with the data in a separate section in the Data Import, Exploration, and Cleaning chapter.
+I could include the link to the data and be clearer with the problems with the 
+data in a separate section in the Data Import, Exploration, and Cleaning chapter.
 
-I could write an introduction to the analysis phase with how I organized and formatted data for the analysis, including statistical calculations.
+I could write an introduction to the analysis phase with how I organized and 
+formatted data for the analysis, including statistical calculations.
 
-I'm most proud of the distribution of trip times, because I felt that it was a simple way of showing that there is a difference for the bike types while also showing how they are different, all in one graph. 
-I think I should look over the graphs again to make sure that the main messages are even clearer by checking the labels again.
+I'm most proud of the distribution of trip times, because I felt that it was a 
+simple way of showing that there is a difference for the bike types while also 
+showing how they are different, all in one graph. 
+I think I should look over the graphs again to make sure that the main messages 
+are even clearer by checking the labels again.
