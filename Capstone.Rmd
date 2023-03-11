@@ -74,74 +74,107 @@ library(lubridate)
 
 The dataset to represent Cyclistic bike share service bike data comes from Divvy, 
 Lyft and Scooters, LLC ("Bikeshare") data. See the licence agreement for more 
-information https://ride.divvybikes.com/data-license-agreement. The past 12 months 
-(October 2021 to September 2022) of historical trip data was downloaded from the 
-database in CSV format to a Google Drive location, and thereafter uploaded to 
-BigQuery. There the 12 files were appended and thereafter exported as a CSV file 
-to be read into this R Markdown report. 
-
-The geographical coordinates columns (longitudes and latitudes for start and end 
-stations) were removed as this analysis will not be using them. 
+information https://ride.divvybikes.com/data-license-agreement. 
+The past 12 months (March 2022 to Febuary 2023) of historical trip data was 
+downloaded from the database in CSV format to a Google Drive location,  
+then uploaded to BigQuery. After this, the 12 files were appended and 
+finally exported as a CSV file to be read into this R Markdown report. 
+Apart from appending the data, the SQL query essentially left the data unchanged 
+so I could showcase the data cleaning process in R, however, in practice it 
+should be more practical and efficient to do some of these steps in the SQL 
+query instead.
 
 ```{r Data Import, echo=FALSE, message=FALSE}
-df <- read_csv("202110-202209_AppendedData.csv", show_col_types = FALSE)
+df <- read_csv("202203-202302_AppendedData_withCoordinates.csv", 
+               show_col_types = FALSE)
 head(df)
 ```
 
 # 3. Data Exploration and Cleaning
 
+First the headers are renamed to make them clearer. The start dates are extracted
+from the date-time columns, and a trip time column is calculated by taking the 
+difference from the start and the end date-times. The date-time columns are then 
+removed.
 
-
-```{r Rename headers, echo=FALSE, message=FALSE}
+```{r Rename headers and parse date-times, echo=FALSE, message=FALSE}
 df_1 <- df %>% 
   rename(Ride_ID = ride_id) %>%
   rename(Bike_Type = rideable_type) %>%
-  rename(Rider_Type = member_casual) %>% 
-  rename(Start_Time = started_at) %>% 
-  rename(End_Time = ended_at)
+  rename(Start_Date_and_Time = started_at) %>%
+  rename(End_Date_and_Time = ended_at) %>%
+  rename(Start_Station_Name = start_station_name) %>%
+  rename(Start_Station_ID = start_station_id) %>%
+  rename(End_Station_Name = end_station_name) %>%
+  rename(End_Station_ID = end_station_id) %>%
+  rename(Rider_Type = member_casual) %>%
+  rename(Start_Latitude = start_lat) %>%
+  rename(Start_Longitude = start_lng) %>%
+  rename(End_Latitude = end_lat) %>%
+  rename(End_Longitude = end_lng) 
+  #mutate(Start_Time = date(Start_Date_and_Time)) #%>%
+  #mutate(End_Date = hms::as_hms(End_Date_and_Time)) %>%
+  #mutate(End_Time = hms::as_hms(End_Date_and_Time))
 ```
+
+```{r Add start date and trip time columns}
+df_1 <-
+  mutate(df_1, Start_Date = date(Start_Date_and_Time)) %>%
+  mutate(df_1, Trip_Time_Hours = difftime(End_Date_and_Time, 
+                                          Start_Date_and_Time, units="mins"))
+```
+
+```{r Remove date-time columns}
+df_1 <- select(df_1, -c(Start_Date_and_Time, End_Date_and_Time))
+```
+
 
 ```{r}
 # There are also missing observations for some of the columns in the head. Using 
 # a different function allows us to see more information about missing values and 
 # also unique values for each column.
 df_skim <- skim_without_charts(df_1)
-```
-```{r}
 df_skim
 ```
 
-
-```{r Information about missing and unique values, echo=FALSE, message=FALSE}
+```{r Information about missing values, echo=FALSE, message=FALSE}
 df_skim %>%
-  ggplot(mapping = aes(x = complete_rate, y = skim_variable)) +
-  geom_bar(stat= "identity") +
-  labs(title="Data completeness per column", x = "Share (0 to 1)", y = "")
+  ggplot(mapping = aes(x = 100*complete_rate, y = skim_variable)) +
+  geom_bar(stat= "identity", fill="azure4") +
+  labs(
+    title="Data completeness per column", 
+    subtitle = "Station Names and IDs have missing data!",
+    x = "Completeness [%]", 
+    y = ""
+    ) +
+  theme_bw() + 
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    plot.title = element_text(hjust = 0.5, color = "black", 
+                              size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, color = "black", 
+                                 size = 10, face = "bold",)
+    ) +
+  geom_text(aes(label = round(100*complete_rate, digits = 0)), 
+            position = position_stack(vjust = 0.97))
 ```
 * Between 15-17% of the data is missing for the start and end station names and 
   IDs. 
   
-```{r Information about missing and unique values, echo=FALSE, message=FALSE}
-df_skim %>%
-  ggplot(mapping = aes(x = skim_variable, y = n_unique)) +
-  geom_bar(stat= "identity") +
-  labs(title="Unique IDs", x = "Share (0 to 1)", y = "")
-```
+From the skim function output the following information about *unique* 
+observations can be seen:
 
-From the skim function output the following information about *unique* observations 
-can be seen:
-
-* Each observation (total of 5,828,235) have unique Ride_IDs.
+* There are a total of 5,829,084 observations that each have unique Ride_IDs.
 * There are 3 unique values for Bike_Type and 2 unique values for Rider_Type.
 * Start and end station names and IDs have about 1000-2000 unique values.
 * The unique values of all the locations are much greater than the "over 600 
   docking station" that were stated in the case study description. Start/End 
   station ID come closest (1302 and 1309 unique values). 
 
-
-  Thus, choosing to omit either columns for name or ID should not have any effect on the missing data. I will 
-  remove names since IDs have a figure closer to the 600 docks from the case 
-  study description.
+Thus, choosing to omit either columns for name or ID should not have any 
+effect on the missing data. I will remove names since IDs have a figure closer 
+to the 600 docks from the case study description.
   
 ```{r Replace NAs with Missing location IDs}
 df_2 <- df_1 %>%
@@ -164,10 +197,12 @@ Finally to calculate the start date of the ride and the total travel time.
 
 ```{r Add start date column}
 df_2 <- 
-  mutate(df_2, Trip_Day = as_date(Start_Time))
+  mutate(df_2, Trip_Day = as_date(Start_Date_and_Time))
 ```
 
-For the total travel time I'll add another column that shows the total time the riders used the bikes for in days, by taking the difference between 'started_at' and 'ended_at' and naming the new column header 'Trip_Time_Days'.
+For the total travel time I'll add another column that shows the total time the 
+riders used the bikes for in days, by taking the difference between 'started_at' 
+and 'ended_at' and naming the new column header 'Trip_Time_Days'.
 
 ```{r Add Trip time column}
 #as.duration((df_2$Trip_Time_Days),"minutes") <-
@@ -177,7 +212,8 @@ df_2 <-
            as_datetime(df_2$Start_Time))) %>% 
   mutate(df_2, Trip_Time_seconds = as_datetime(df_2$End_Time)-
            as_datetime(df_2$Start_Time)) %>% 
-  select(Ride_ID,Bike_Type,start_station_name,end_station_name,start_station_id,end_station_id,Rider_Type,Trip_Time, Trip_Time_seconds, Trip_Day)
+  select(Ride_ID,Bike_Type,start_station_name,end_station_name,start_station_id,
+         end_station_id,Rider_Type,Trip_Time, Trip_Time_seconds, Trip_Day)
 ```
 
 There also appears to be some days are less than 0 for members using electric 
