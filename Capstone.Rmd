@@ -69,6 +69,10 @@ library(tidyverse)
 library(skimr)
 library(janitor)
 library(lubridate)
+library(openxlsx)
+library(anytime)
+library(ggridges)
+library(ggmap)
 ```
 
 
@@ -92,10 +96,11 @@ head(df)
 
 # 3. Data Exploration and Cleaning
 
-First the headers are renamed to make them clearer. The start dates are extracted
-from the date-time columns, and a trip time column is calculated by taking the 
-difference from the start and the end date-times. The date-time columns are then 
-removed.
+First the headers are renamed to make them clearer. Then the date columns are 
+converted to the datetime format. The start dates are extracted then extracted
+from the datetime columns, and a trip time column is calculated by taking the 
+difference from the start and the end datetimes. The riginal datetime columns 
+are then removed.
 
 ```{r Rename headers and parse date-times, echo=FALSE, message=FALSE}
 df_1 <- df %>% 
@@ -112,35 +117,68 @@ df_1 <- df %>%
   rename(Start_Longitude = start_lng) %>%
   rename(End_Latitude = end_lat) %>%
   rename(End_Longitude = end_lng) 
-  #mutate(Start_Time = date(Start_Date_and_Time)) #%>%
-  #mutate(End_Date = hms::as_hms(End_Date_and_Time)) %>%
-  #mutate(End_Time = hms::as_hms(End_Date_and_Time))
 ```
 
-```{r Add start date and trip time columns}
-df_1 <-
-  mutate(df_1, Start_Date = date(Start_Date_and_Time)) %>%
-  mutate(df_1, Trip_Time_Hours = difftime(End_Date_and_Time, 
-                                          Start_Date_and_Time, units="mins"))
-```
 
-```{r Remove date-time columns}
-df_1 <- select(df_1, -c(Start_Date_and_Time, End_Date_and_Time))
-```
 
+```{r parse datetime column, add start date column and add trip time columns}
+df_2 <- df_1 %>%
+  mutate(
+    Start_Date = date(Start_Date_and_Time),
+    Start_Date_and_Time = anytime(Start_Date_and_Time, tz = "UTC"),
+    End_Date_and_Time = anytime(End_Date_and_Time, tz = "UTC"),
+    Trip_Time_Minutes = difftime(End_Date_and_Time, 
+                                 Start_Date_and_Time, units="mins")
+    )
+```
 
 ```{r}
+summary(df_2)
+```
+
+```{r save new df}
+df_3 <- df_2
+```
+
+Since the trip times and the starting dates have been "extracted" from the 
+original datetime columns, the original columns can now be removed.
+
+```{r Remove date-time columns}
+df_3 <- select(df_3, -c(Start_Date_and_Time, End_Date_and_Time))
+```
+
+```{r}
+summary(df_3)
+```
+
+Some Trip_Time_Minutes values are negative, which doesn't make sense. These 
+negative observations will be removed and additionally any trip times that are
+under 2 minutes will also be removed to make sure that the trips were 
+intentional by the rider.
+
+```{r}
+paste(sum(df_1$Trip_Time_Minutes < 2),
+      "rows with trip times below 0 minutes have been removed.")
+
+df_clean <- df_3 %>%
+  filter(Trip_Time_Minutes > 2) #removes rows below 0 minutes
+```
+
+Now to look at missing values and unique values from the cleaned dataset.
+
+```{r Skim dataframe}
 # There are also missing observations for some of the columns in the head. Using 
 # a different function allows us to see more information about missing values and 
 # also unique values for each column.
-df_skim <- skim_without_charts(df_1)
-df_skim
+df_skim <- skim_without_charts(df_clean) %>%
+  print()
 ```
+
 
 ```{r Information about missing values, echo=FALSE, message=FALSE}
 df_skim %>%
   ggplot(mapping = aes(x = 100*complete_rate, y = skim_variable)) +
-  geom_bar(stat= "identity", fill="azure4") +
+  geom_bar(stat= "identity", fill="azure3") +
   labs(
     title="Data completeness per column", 
     subtitle = "Station Names and IDs have missing data!",
@@ -166,69 +204,80 @@ From the skim function output the following information about *unique*
 observations can be seen:
 
 * There are a total of 5,829,084 observations that each have unique Ride_IDs.
-* There are 3 unique values for Bike_Type and 2 unique values for Rider_Type.
-* Start and end station names and IDs have about 1000-2000 unique values.
-* The unique values of all the locations are much greater than the "over 600 
-  docking station" that were stated in the case study description. Start/End 
-  station ID come closest (1302 and 1309 unique values). 
+* Bike_Type has 3 unique values 
+* Rider_Type has 2 unique values.
+* Start and end station names have close to 1700 unique values
+* Start and end IDs have close to 1300 unique values.
 
-Thus, choosing to omit either columns for name or ID should not have any 
-effect on the missing data. I will remove names since IDs have a figure closer 
-to the 600 docks from the case study description.
-  
-```{r Replace NAs with Missing location IDs}
-df_2 <- df_1 %>%
-  replace_na(list(start_station_id = 'Missing location ID', end_station_id = 
-                    'Missing location ID')) %>%
-  replace_na(list(start_station_id = 'Missing location Name', end_station_id = 
-                    'Missing location Name'))
+The unique values of all the locations are much greater than the "over 600 
+docking station" that were stated in the case study description. Start/End 
+station ID come closest (1302 and 1309 unique values). This divergence
+merits an investigation, but will not be the focus of this analysis.
+
+The location IDs consist of a code while the location names are either one or
+two street names (presumedly their intersection) with a "&" symbol as their 
+denominator. There are more unique location names than location IDs, which
+could be for a variety or reasons. It could be misspellings, it could be 
+due to some street names being in reverse order, or it could perhaps be due
+to there being more than one station per intersection. Again, delving deeper
+into the geographical data is not the focus of this analysis as this is instead
+something that I might ask a data engineer for more information in a real
+world problem. However, to make sure I do my due diligence in this analysis, I 
+will export the unique values to Excel and show my observations and 
+recommendations here.
+
+```{r duplicate start street names}
+uniqueStartStations <- df_3 %>%
+  select(Start_Station_ID, Start_Station_Name) %>%
+  distinct()
 ```
 
-There may be many reasons for why there's missing data, and I will speculate a 
-bit here so I can explain my choice in cleaning. For instance, it could be that
-there the data wasn't transmitted properly due to bad connections. There might 
-also be missing data because the bike was parked/thrown somewhere "unofficial" 
-at the end of the ride. Whatever the case, the missing data will be of high 
-importance and thus shouldn't be removed to be transparent and to be clear 
-where more or better data collection is be needed for more granular insights 
-into locations.
-
-Finally to calculate the start date of the ride and the total travel time.
-
-```{r Add start date column}
-df_2 <- 
-  mutate(df_2, Trip_Day = as_date(Start_Date_and_Time))
+```{r duplicate end street names}
+uniqueEndStations <- df_3 %>%
+  select(End_Station_ID, End_Station_Name) %>%
+  distinct()
 ```
 
-For the total travel time I'll add another column that shows the total time the 
-riders used the bikes for in days, by taking the difference between 'started_at' 
-and 'ended_at' and naming the new column header 'Trip_Time_Days'.
-
-```{r Add Trip time column}
-#as.duration((df_2$Trip_Time_Days),"minutes") <-
-  
-df_2 <- 
-  mutate(df_2, Trip_Time = seconds_to_period(as_datetime(df_2$End_Time)-
-           as_datetime(df_2$Start_Time))) %>% 
-  mutate(df_2, Trip_Time_seconds = as_datetime(df_2$End_Time)-
-           as_datetime(df_2$Start_Time)) %>% 
-  select(Ride_ID,Bike_Type,start_station_name,end_station_name,start_station_id,
-         end_station_id,Rider_Type,Trip_Time, Trip_Time_seconds, Trip_Day)
+```{r List occurences >1 of Start_Station_Names for UniqueStartStations}
+n_occur <- data.frame(table(uniqueStartStations$Start_Station_Name))
+n_occur[n_occur$Freq > 1,]
 ```
 
-There also appears to be some days are less than 0 for members using electric 
-bikes so these will be removed.
-
-```{r}
-paste(sum(df_2$Trip_Time < 0),"rows with trip times below 0 seconds have been removed.")
-
-df_clean <- df_2[df_2$Trip_Time >= 0, ] #removes rows below 0 seconds
-rm(df,df_1,df_2) #removes other dataframes to save memory
-
+```{r List occurences >1 of Start_Station_IDs for UniqueStartStations}
+n_occur <- data.frame(table(uniqueStartStations$Start_Station_ID))
+n_occur[n_occur$Freq > 1,]
 ```
-```{r}
-head(df_clean)
+
+```{r List occurences >1 of End_Station_Names for UniqueEndStations}
+n_occur <- data.frame(table(uniqueEndStations$End_Station_Name))
+n_occur[n_occur$Freq > 1,]
 ```
+
+```{r List occurences >1 of End_Station_IDs for UniqueEndStations}
+n_occur <- data.frame(table(uniqueEndStations$End_Station_ID))
+n_occur[n_occur$Freq > 1,]
+```
+
+```{r create Excel sheet to investigate unique occurences of station names and IDs}
+Start_stations <- createWorkbook()
+addWorksheet(Start_stations, "First_Sheet")
+writeData(Start_stations,"First_Sheet", uniqueStartStations)
+saveWorkbook(Start_stations, file = "Start_stations_unique.xlsx", overwrite = TRUE)
+```
+
+From the investigation I found that:
+* There are 17 duplicate start station names (for station ID)
+* There are 341 duplicate start station IDs (for staion names)
+* There are 17 duplicate end station names (for station ID)
+* There are 351 duplicate end station IDs (for station names)
+* Station ID codes are sometimes text e.g. street names
+
+The overlap likely means that there are many locations that should be aggregated
+into just one if a fair comparison were to be done for the counts of rides
+per location. For this reason, also due to the ~15% missing values, there is 
+significant bias when using this data, which should be kept in mind when 
+looking at the results so as to not make conculsions and decisions on this 
+misleading data. 
 
 # 4. Analyzing the Questions
 
@@ -239,7 +288,7 @@ Visualize the counts of rides by bike type and member/casual(non-member):
 ggplot() +
   geom_bar(df_clean, mapping = aes(Rider_Type)) +
   facet_wrap(~Bike_Type) +
-  labs(title="Annual number of rides", x = "", y = "Rides")
+  labs(title="Annual count of rides per bike and rider type", x = "", y = "Rides [count]")
 ```
 Some observations of the graph:
 * There are more rides from members than rides by casual riders in total.
@@ -263,15 +312,17 @@ To get some stats on the trip time I'll do some
 * Min max och each travel time for each bike type and membership type
 
 ```{r message=FALSE}
-#percentage of riders using docked bikes
 df_clean %>%
   group_by(Rider_Type, Bike_Type) %>%
-  summarise(mean = mean(Trip_Time_seconds), n= n()) %>%
-  ggplot(mapping = aes(x = Rider_Type, y = mean)) +
-  geom_bar(stat= "identity") +
-  facet_wrap(~Bike_Type) +
-  labs(title="Mean ride times", x = "", y = "seconds")
+  summarise(mean = mean(Trip_Time_Minutes), n= n()) %>%
+  ggplot(mapping = aes(x = Bike_Type, 
+                       y = mean,
+                       fill = Bike_Type)) +
+  geom_bar(stat= "identity", color = "black") +
+  facet_wrap(~Rider_Type) +
+  labs(title="Annual Mean ride times per bike and rider type", x = "", y = "duration [minutes]")
 ```
+
 This shows that although there aren't as many docked bikes as other types of 
 bikes, the total annual ride time is in the same ballpark.
 
@@ -279,15 +330,18 @@ Docked bikes seem to include times that are much greater than electric and
 classic bikes in travel time, so this will be investigated further in a 
 distribution.
 
-```{r}
-df_clean %>%
-  filter(Bike_Type %in% c('classic_bike','docked_bike','electric_bike')) %>% 
-  ggplot(aes(x=Trip_Time_seconds, color = Bike_Type)) + 
-  geom_density() +
-  scale_x_continuous(limits=c(0, 10000)) +
-  labs(title = "Distribution of trip times", 
-       x = "Trip times in seconds", y = "Number of rides") +
-  theme(axis.text.y =element_blank(), axis.ticks.y=element_blank())
+```{r message=FALSE, warning=FALSE}
+ggplot(df_clean,
+       aes(x = Trip_Time_Minutes,
+           y = Bike_Type,
+           fill = Bike_Type)
+       ) +
+  scale_x_continuous(limits=c(0, 60)) +
+  geom_density_ridges() + 
+  facet_wrap(~Rider_Type, ncol = 1) +
+  theme_ridges() +
+  labs(title = "Distribution of trip times under 1 hour", 
+       x = "Ride count distribution", y = "Rides [count]")
 ```
 
 The comparison between the trip times for the different bikes shows that the 
@@ -305,29 +359,25 @@ divided into bike types in the first graph and non-member/member in the second
 graph. Note that the dips in the month of October is due to the cut-off in the 
 data being in that month, hence the October 2021 and October 2022 data should
 be aggregated to get the "real" value for that month.
+
 ```{r}
-df_clean %>%
-  filter(Bike_Type %in% c('classic_bike','docked_bike','electric_bike')) %>% 
-  ggplot(aes(x=Trip_Day,color = Bike_Type)) + 
-  geom_density() +
-  labs(title = "Trips distribution per time of year", 
-       x = "", y = "") +
-  theme(axis.text.y =element_blank(), axis.ticks.y=element_blank())
+ggplot(df_clean, 
+       aes(x = Start_Date, 
+           fill = Bike_Type)) +
+  geom_density(alpha = 0.4) +
+  scale_x_date(date_breaks = "1 months", date_labels = "%b %d") +
+  facet_wrap(~Rider_Type, ncol = 1) +
+  labs(title = "Trips distribution per day of the year", 
+       x = "Trip day", y = "") +
+  theme(axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank()  #remove y axis ticks
+        )
 ```
+
 Bike usage is higher between May-October and lower between September-April.
 
 There is not much difference between what time of year users of different bike 
 types ride bikes except for a dip of relative electric bike usage in June.
-
-```{r}
-df_clean %>%
-  filter(Rider_Type %in% c('casual','member')) %>% 
-  ggplot(aes(x=Trip_Day, color = Rider_Type)) + 
-  geom_density() +
-  labs(title = "Trips distribution per time of year", 
-       x = "", y = "") +
-  theme(axis.text.y =element_blank(), axis.ticks.y=element_blank())
-```
 
 Members have a more even distribution of usage for throughout the year compared 
 to casual riders. Essentially, the cooler months of September-May casual riders 
@@ -337,6 +387,27 @@ June-August.
 
 As the summer months are where most casual riders are using the bikes, there 
 could be an opportunity to run campaigns during these months.
+
+## 4d. Where are the bikes being used?
+
+```{r}
+ggplot(df_clean, aes(Start_Station_Name, Freq)) +
+  geom_bar(stat="identity", width = 0.5, fill="tomato2") + 
+  labs(title="Bar Chart", 
+       subtitle="Manufacturer of vehicles", 
+       caption="Source: Frequency of Manufacturers from 'mpg' dataset") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+
+df_clean %>% 
+  group_by(broad_field,field) %>%
+  summarise(n=sum(n_phds, na.rm=TRUE)) %>%
+  arrange(desc(n))%>%
+  head(30)%>%
+  ggplot(aes(x=reorder(field,n),y=n, fill=broad_field)) +
+  xlab("field")+
+  geom_col() + coord_flip()
+```
+
 
 ## 5. Evaluation and conclusions
 
