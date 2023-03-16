@@ -164,8 +164,8 @@ df_clean <- df_3 %>%
   filter(Trip_Time_Minutes > 2) #removes rows below 0 minutes
 ```
 
-Now to look at missing values and unique values from the cleaned dataset.
-
+Now to look at missing values and unique values from the cleaned dataset, as 
+well as some statistics by using the skim function.
 ```{r Skim dataframe}
 # There are also missing observations for some of the columns in the head. Using 
 # a different function allows us to see more information about missing values and 
@@ -276,7 +276,7 @@ The overlap likely means that there are many locations that should be aggregated
 into just one if a fair comparison were to be done for the counts of rides
 per location. For this reason, also due to the ~15% missing values, there is 
 significant bias when using this data, which should be kept in mind when 
-looking at the results so as to not make conculsions and decisions on this 
+looking at the results so as to not make conclusions and decisions on this 
 misleading data. 
 
 # 4. Analyzing the Questions
@@ -284,12 +284,16 @@ misleading data.
 ## 4a. How are the different bike types used by members and non-members?
 
 Visualize the counts of rides by bike type and member/casual(non-member):
-```{r Rider type vs Bike type}
-ggplot() +
-  geom_bar(df_clean, mapping = aes(Rider_Type)) +
-  facet_wrap(~Bike_Type) +
-  labs(title="Annual count of rides per bike and rider type", x = "", y = "Rides [count]")
+```{r Annual count of rides}
+df_clean %>%
+  ggplot() +
+  geom_bar(mapping = aes(Bike_Type, fill = Bike_Type), , color = "black") +
+  facet_wrap(~Rider_Type) +
+  labs(title="Annual rides per bike and rider type", x = "", y = "Rides [count]") +
+  theme(plot.title = element_text(hjust = 0.5, color = "black", 
+                              size = 14, face = "bold"))
 ```
+
 Some observations of the graph:
 * There are more rides from members than rides by casual riders in total.
 * Casual riders seem to prefer electric bikes over classic bikes while it is the
@@ -311,7 +315,7 @@ To get some stats on the trip time I'll do some
 * Average travel time for each bike type and membership type
 * Min max och each travel time for each bike type and membership type
 
-```{r message=FALSE}
+```{r Annual mean ride times, message=FALSE}
 df_clean %>%
   group_by(Rider_Type, Bike_Type) %>%
   summarise(mean = mean(Trip_Time_Minutes), n= n()) %>%
@@ -320,7 +324,11 @@ df_clean %>%
                        fill = Bike_Type)) +
   geom_bar(stat= "identity", color = "black") +
   facet_wrap(~Rider_Type) +
-  labs(title="Annual Mean ride times per bike and rider type", x = "", y = "duration [minutes]")
+  labs(title="Annual Mean ride times per bike and rider type", 
+       x = "", 
+       y = "duration [minutes]") +
+  theme(plot.title = element_text(hjust = 0.5, color = "black", 
+                              size = 14, face = "bold"))
 ```
 
 This shows that although there aren't as many docked bikes as other types of 
@@ -341,7 +349,9 @@ ggplot(df_clean,
   facet_wrap(~Rider_Type, ncol = 1) +
   theme_ridges() +
   labs(title = "Distribution of trip times under 1 hour", 
-       x = "Ride count distribution", y = "Rides [count]")
+       x = "Trip time [minutes]", y = "Rides [count]") +
+  theme(plot.title = element_text(hjust = 0.5, color = "black", 
+                              size = 14, face = "bold"))
 ```
 
 The comparison between the trip times for the different bikes shows that the 
@@ -371,7 +381,9 @@ ggplot(df_clean,
        x = "Trip day", y = "") +
   theme(axis.text.y=element_blank(),  #remove y axis labels
         axis.ticks.y=element_blank()  #remove y axis ticks
-        )
+        ) +
+  theme(plot.title = element_text(hjust = 0.5, color = "black", 
+                              size = 14, face = "bold"))
 ```
 
 Bike usage is higher between May-October and lower between September-April.
