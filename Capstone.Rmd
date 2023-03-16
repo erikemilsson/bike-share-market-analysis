@@ -72,7 +72,7 @@ library(lubridate)
 library(openxlsx)
 library(anytime)
 library(ggridges)
-library(ggmap)
+library(plotly)
 ```
 
 
@@ -88,10 +88,11 @@ so I could showcase the data cleaning process in R, however, in practice it
 should be more practical and efficient to do some of these steps in the SQL 
 query instead.
 
-```{r Data Import, echo=FALSE, message=FALSE}
+```{r Data Import, message=FALSE}
 df <- read_csv("202203-202302_AppendedData_withCoordinates.csv", 
                show_col_types = FALSE)
-head(df)
+colnames(df)
+#View(df)
 ```
 
 # 3. Data Exploration and Cleaning
@@ -132,23 +133,15 @@ df_2 <- df_1 %>%
     )
 ```
 
-```{r}
-summary(df_2)
-```
-
-```{r save new df}
+```{r save new df as backup, include=FALSE}
 df_3 <- df_2
 ```
 
 Since the trip times and the starting dates have been "extracted" from the 
-original datetime columns, the original columns can now be removed.
+original datetime columns, the original columns can be removed.
 
 ```{r Remove date-time columns}
 df_3 <- select(df_3, -c(Start_Date_and_Time, End_Date_and_Time))
-```
-
-```{r}
-summary(df_3)
 ```
 
 Some Trip_Time_Minutes values are negative, which doesn't make sense. These 
@@ -157,8 +150,10 @@ under 2 minutes will also be removed to make sure that the trips were
 intentional by the rider.
 
 ```{r}
-paste(sum(df_1$Trip_Time_Minutes < 2),
-      "rows with trip times below 0 minutes have been removed.")
+paste(sum(df_3$Trip_Time_Minutes < 2),
+      "rows with trip times below 0 minutes have been removed, equal to ", 
+      round(100*(sum(df_3$Trip_Time_Minutes < 2))/(nrow(df_3)),1), 
+      "% of all trips.")
 
 df_clean <- df_3 %>%
   filter(Trip_Time_Minutes > 2) #removes rows below 0 minutes
@@ -167,15 +162,12 @@ df_clean <- df_3 %>%
 Now to look at missing values and unique values from the cleaned dataset, as 
 well as some statistics by using the skim function.
 ```{r Skim dataframe}
-# There are also missing observations for some of the columns in the head. Using 
-# a different function allows us to see more information about missing values and 
-# also unique values for each column.
 df_skim <- skim_without_charts(df_clean) %>%
   print()
 ```
 
 
-```{r Information about missing values, echo=FALSE, message=FALSE}
+```{r Information about missing values}
 df_skim %>%
   ggplot(mapping = aes(x = 100*complete_rate, y = skim_variable)) +
   geom_bar(stat= "identity", fill="azure3") +
@@ -215,7 +207,7 @@ station ID come closest (1302 and 1309 unique values). This divergence
 merits an investigation, but will not be the focus of this analysis.
 
 The location IDs consist of a code while the location names are either one or
-two street names (presumedly their intersection) with a "&" symbol as their 
+two street names (presumably their intersection) with a "&" symbol as their 
 denominator. There are more unique location names than location IDs, which
 could be for a variety or reasons. It could be misspellings, it could be 
 due to some street names being in reverse order, or it could perhaps be due
@@ -226,39 +218,39 @@ world problem. However, to make sure I do my due diligence in this analysis, I
 will export the unique values to Excel and show my observations and 
 recommendations here.
 
-```{r duplicate start street names}
+```{r duplicate start street names, eval=FALSE, include=FALSE}
 uniqueStartStations <- df_3 %>%
   select(Start_Station_ID, Start_Station_Name) %>%
   distinct()
 ```
 
-```{r duplicate end street names}
+```{r duplicate end street names, eval=FALSE, include=FALSE}
 uniqueEndStations <- df_3 %>%
   select(End_Station_ID, End_Station_Name) %>%
   distinct()
 ```
 
-```{r List occurences >1 of Start_Station_Names for UniqueStartStations}
+```{r List occurences >1 of Start_Station_Names for UniqueStartStations, eval=FALSE, include=FALSE}
 n_occur <- data.frame(table(uniqueStartStations$Start_Station_Name))
 n_occur[n_occur$Freq > 1,]
 ```
 
-```{r List occurences >1 of Start_Station_IDs for UniqueStartStations}
+```{r List occurences >1 of Start_Station_IDs for UniqueStartStations, eval=FALSE, include=FALSE}
 n_occur <- data.frame(table(uniqueStartStations$Start_Station_ID))
 n_occur[n_occur$Freq > 1,]
 ```
 
-```{r List occurences >1 of End_Station_Names for UniqueEndStations}
+```{r List occurences >1 of End_Station_Names for UniqueEndStations, eval=FALSE, include=FALSE}
 n_occur <- data.frame(table(uniqueEndStations$End_Station_Name))
 n_occur[n_occur$Freq > 1,]
 ```
 
-```{r List occurences >1 of End_Station_IDs for UniqueEndStations}
+```{r List occurences >1 of End_Station_IDs for UniqueEndStations, eval=FALSE, include=FALSE}
 n_occur <- data.frame(table(uniqueEndStations$End_Station_ID))
 n_occur[n_occur$Freq > 1,]
 ```
 
-```{r create Excel sheet to investigate unique occurences of station names and IDs}
+```{r create Excel sheet to investigate unique occurences of station names and IDs, eval=FALSE, include=FALSE}
 Start_stations <- createWorkbook()
 addWorksheet(Start_stations, "First_Sheet")
 writeData(Start_stations,"First_Sheet", uniqueStartStations)
@@ -283,27 +275,29 @@ misleading data.
 
 ## 4a. How are the different bike types used by members and non-members?
 
-Visualize the counts of rides by bike type and member/casual(non-member):
+By splitting up the casual riders and members, and splitting up the three 
+type of bike types (classic bikes, docked bikes, and electric bikes) we can
+compare them by how many trips each makes a year:
 ```{r Annual count of rides}
 df_clean %>%
   ggplot() +
-  geom_bar(mapping = aes(Bike_Type, fill = Bike_Type), , color = "black") +
+  geom_bar(mapping = aes(Bike_Type, fill = Bike_Type), color = "black") +
   facet_wrap(~Rider_Type) +
   labs(title="Annual rides per bike and rider type", x = "", y = "Rides [count]") +
   theme(plot.title = element_text(hjust = 0.5, color = "black", 
                               size = 14, face = "bold"))
 ```
+Observations:
 
-Some observations of the graph:
-* There are more rides from members than rides by casual riders in total.
-* Casual riders seem to prefer electric bikes over classic bikes while it is the
-  opposite for members. However, the difference is not substantial.
-* Classic bikes are used much more by members than by casual riders. Electric
-  bikes are used about the same amount by members and casual riders.
+* There are more total rides from members than for casual riders.
+* Casual riders prefer to take more electric bike rides than classic bike rides by a small margin, while it is the opposite for members.
+* There are about twice as many classic bike rides for casual riders as for members. 
+* Electric bikes are used about the same amount of times by casual riders and members.
 * Docked bikes were not used at all by members.
-* Docked bikes are used much less than any other type of bike.
+* Docked bikes are used much less often than any other type of bike.
 
-Some questions that pop up from this first graph are:
+Some questions that I get from this graph:
+
 * Why don't any annual members use docked bikes at all? Are docked bikes 
   available in the areas where they would be used? What percentage of rides are 
   using docked bikes?
@@ -311,9 +305,35 @@ Some questions that pop up from this first graph are:
 
 ## 4b. How is the trip time different for members and non-members?
 
-To get some stats on the trip time I'll do some 
-* Average travel time for each bike type and membership type
-* Min max och each travel time for each bike type and membership type
+To get some stats on the trip time I'll create a table and a boxplot of the 
+ride times.
+
+```{r}
+df_clean %>%
+  group_by(Rider_Type, Bike_Type) %>%
+  summarise(min = min(Trip_Time_Minutes), 
+            max = max(Trip_Time_Minutes),
+            mean = mean(Trip_Time_Minutes),
+            median = median(Trip_Time_Minutes),
+            "standard deviation" = sd(Trip_Time_Minutes)
+            )
+```
+
+```{r message=FALSE, warning=FALSE}
+df_clean %>%
+  ggplot(aes(x=Rider_Type, y=Trip_Time_Minutes, fill=Bike_Type)) +
+  geom_boxplot() +
+  facet_wrap(~Rider_Type) +
+  labs(title="Annual ride times per bike and rider type", 
+       x = "", 
+       y = "duration [minutes]") +
+  theme(plot.title = element_text(hjust = 0.5, color = "black", 
+                              size = 14, face = "bold"))
+```
+
+The boxplot wasn't very helpful since the spread of the docked bike rides is so 
+wide. I'll instead do a plot of only the mean times, keeping in mind that the
+large spread for some of the values.
 
 ```{r Annual mean ride times, message=FALSE}
 df_clean %>%
@@ -332,11 +352,9 @@ df_clean %>%
 ```
 
 This shows that although there aren't as many docked bikes as other types of 
-bikes, the total annual ride time is in the same ballpark.
-
-Docked bikes seem to include times that are much greater than electric and 
-classic bikes in travel time, so this will be investigated further in a 
-distribution.
+bikes, the total annual ride time is about 4-6 times higher. Also casual riders
+use bikes for longer than members, especially for classic bikes (about twice
+as long on average).
 
 ```{r message=FALSE, warning=FALSE}
 ggplot(df_clean,
@@ -354,21 +372,13 @@ ggplot(df_clean,
                               size = 14, face = "bold"))
 ```
 
-The comparison between the trip times for the different bikes shows that the 
-electric and classic bikes are quite similar in trip time distribution while 
-the docked bikes are on average used for longer. In fact, almost no classic 
-and electric bikes are used for longer than 3000 seconds (about 1 hour) while 
-some bike users take trips at up to about 1000 seconds (about 3 hours) or 
-longer. Since all docked bike users are non-members, this is difference in 
-user behavior should be looked at closer.
+This last graph for the distribution of times shows that the docked bike ride
+times are spread out much more than other bike rides. 
 
 ## 4c. How are the bikes used throughout the year?
 
-The following graphs will plot the distribution of rides throughout the year, 
-divided into bike types in the first graph and non-member/member in the second 
-graph. Note that the dips in the month of October is due to the cut-off in the 
-data being in that month, hence the October 2021 and October 2022 data should
-be aggregated to get the "real" value for that month.
+Now to plot the distribution of rides throughout the year, divided again into 
+casual riders and members, as well as bike types.
 
 ```{r}
 ggplot(df_clean, 
@@ -385,39 +395,47 @@ ggplot(df_clean,
   theme(plot.title = element_text(hjust = 0.5, color = "black", 
                               size = 14, face = "bold"))
 ```
-
-Bike usage is higher between May-October and lower between September-April.
-
-There is not much difference between what time of year users of different bike 
-types ride bikes except for a dip of relative electric bike usage in June.
-
-Members have a more even distribution of usage for throughout the year compared 
+* Bike usage is in general higher between May-November and lower between November-May.
+* Electric bike rides seem to be used most in the months of July-October.
+* Classic and docked bikes overlap more, and are used most in the months of May-Aug.
+* Members have a more even distribution of usage for throughout the year compared 
 to casual riders. Essentially, the cooler months of September-May casual riders 
 use the service less relative to members while in the warmer months June-October 
-they use the bikes more relative to members. The difference is most extreme in
-June-August.
+they use the bikes more relative to members.
 
 As the summer months are where most casual riders are using the bikes, there 
-could be an opportunity to run campaigns during these months.
+could be an opportunity to run campaigns during these months to hook them for 
+the year.
 
 ## 4d. Where are the bikes being used?
 
 ```{r}
-ggplot(df_clean, aes(Start_Station_Name, Freq)) +
-  geom_bar(stat="identity", width = 0.5, fill="tomato2") + 
-  labs(title="Bar Chart", 
-       subtitle="Manufacturer of vehicles", 
-       caption="Source: Frequency of Manufacturers from 'mpg' dataset") + 
-  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+df_clean_map <- df_clean %>%
+  select(Rider_Type, 
+         Bike_Type, 
+         Start_Longitude, Start_Latitude,
+         End_Longitude, End_Latitude)
 
-df_clean %>% 
-  group_by(broad_field,field) %>%
-  summarise(n=sum(n_phds, na.rm=TRUE)) %>%
-  arrange(desc(n))%>%
-  head(30)%>%
-  ggplot(aes(x=reorder(field,n),y=n, fill=broad_field)) +
-  xlab("field")+
-  geom_col() + coord_flip()
+ride_map <- plot_geo(df_clean_map %>% sample_n(1000),
+                     lat = ~Start_Latitude,
+                     lon = ~Start_Longitude, 
+                     marker = list(size = 3, color = "FFFCC", opacity = 0.25)) %>%
+  add_markers(hoverinfo = "none") %>%
+  config(displayModeBar = FALSE) %>%
+  layout(geo =
+           list(
+             scope = 'usa',
+             showland = TRUE,
+             showlakes = TRUE,
+             landcolor = toRGB('lightgreen'),
+             lakecolor = toRGB('lightblue'))
+  )
+
+ride_map
+# plot_geo(df_clean, 
+#          locationmode = 'ISO-3',
+#          frame = )
+
 ```
 
 
