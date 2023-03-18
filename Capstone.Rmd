@@ -12,30 +12,26 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-*This project is part of the Google Data Analytics Certificate on Coursera and *
-*the dataset and the fictional problem comes from Track 1 How does a bike-share*
-*navigate speedy business. I am using R in R-markdown for data import, cleaning*
-*and visualization as well as the final reporting. R-markdown can do all these *
-*steps and having everything in one place keeps track of the assumptions and *
-*steps of the analysis for transparency and reproducibility*
+*This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business. I used SQL for data appending the datasets and R for data import, cleaning and visualization as well as the final reporting.*
 
 **TABLE OF CONTENTS**
-1) Business Task Background
-2) Importing Libraries, Data Import and Dataset
-3) Data Exploration and Cleaning
-4) Analyzing the Questions
-   a) How are the different bike types used by members and non-members?
-   b) How is the trip time different for members and non-members?
-   c) How are the bikes used throughout the year?
-5) Evaluation and conclusions
 
-# 1.Business Task Background
+1. Business Task Background
+2. Importing Libraries, Data Import and Dataset
+3. Data Exploration and Cleaning
+4. Analyzing the Questions
+    a. How are the different bike types used by members and non-members?
+    b. How is the trip time different for members and non-members?
+    c. How are the bikes used throughout the year?
+    d. Where are the bikes being used?
+5. Recommendations
+
+# 1. Business Task Background
 Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. 
-Currently there are two types of riders: 1) **casual riders** (those who buy 
-single-ride or full-day passes), and 2) **annual members a.k.a. Cyclistic members**. 
+Currently there are two types of riders: 1) casual riders (those who buy 
+single-ride or full-day passes), and 2) annual members a.k.a. Cyclistic members. 
 
-The goal is to *maximize the number of annual memberships for the company by* 
-*converting more casual riders to annual members*. Lily Moreno (director of 
+The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of 
 marketing) and the Cyclistic finance analysts have concluded that that annual 
 members are more profitable than casual riders. Before this, Cyclistic have 
 focused on building general awareness and appealing to broad consumer segments.
@@ -48,8 +44,7 @@ them use the service to commute to work each day.
 Of the the following three questions that will guide the larger scope of the 
 future marketing program, this report will only answer the first question:
 
-* <mark>**How do annual members and casual riders use Cyclistic bikes**</mark>
-  <mark>**differently?**</mark>
+* How do annual members and casual riders use Cyclistic bikes differently?
 * Why would casual riders buy Cyclistic annual memberships?
 * How can Cyclistic use digital media to influence casual riders to become 
 annual members?
@@ -103,7 +98,7 @@ from the datetime columns, and a trip time column is calculated by taking the
 difference from the start and the end datetimes. The riginal datetime columns 
 are then removed.
 
-```{r Rename headers and parse date-times, echo=FALSE, message=FALSE}
+```{r Rename headers, echo=FALSE, message=FALSE}
 df_1 <- df %>% 
   rename(Ride_ID = ride_id) %>%
   rename(Bike_Type = rideable_type) %>%
@@ -301,7 +296,7 @@ Observations:
 To get some stats on the trip time I'll create a table and a boxplot of the 
 ride times.
 
-```{r}
+```{r trip time stats}
 df_clean %>%
   group_by(Rider_Type, Bike_Type) %>%
   summarise(min = min(Trip_Time_Minutes), 
@@ -312,7 +307,7 @@ df_clean %>%
             )
 ```
 
-```{r message=FALSE, warning=FALSE}
+```{r boxplot trip times, message=FALSE, warning=FALSE}
 df_clean %>%
   ggplot(aes(x=Rider_Type, y=Trip_Time_Minutes, fill=Bike_Type)) +
   geom_boxplot() +
@@ -349,7 +344,7 @@ bikes, the total annual ride time is about 4-6 times higher. Also casual riders
 use bikes for longer than members, especially for classic bikes (about twice
 as long on average).
 
-```{r message=FALSE, warning=FALSE}
+```{r trip time distribution first hour, message=FALSE, warning=FALSE}
 ggplot(df_clean,
        aes(x = Trip_Time_Minutes,
            y = Bike_Type,
@@ -373,7 +368,7 @@ times are spread out much more than other bike rides.
 Now to plot the distribution of rides throughout the year, divided again into 
 casual riders and members, as well as bike types.
 
-```{r}
+```{r trip time distribution over year}
 ggplot(df_clean, 
        aes(x = Start_Date, 
            fill = Bike_Type)) +
@@ -409,7 +404,7 @@ rides start from.
 
 (By clicking the legend we can turn on or off the markers from the map)
 
-```{r}
+```{r map casual and member}
 df_clean_map <- df_clean %>% 
   select(Rider_Type, 
          Bike_Type, 
@@ -439,13 +434,6 @@ There is quite a lot of overlap between casual riders and members, so this
 this map doesn't really give any new insights. Looking at the bike types gives 
 something interesting to go on however.
 ```{r}
-df_clean_map <- df_clean %>% 
-  select(Rider_Type, 
-         Bike_Type, 
-         Start_Longitude, 
-         Start_Latitude)
-
-
 fig <- plot_ly(df_clean_map %>% sample_n(100000),
     lat = ~Start_Latitude,
     lon = ~Start_Longitude,
@@ -469,12 +457,12 @@ and electric bikes. The classic bikes have more spread, but the electric
 bikes have the most spread of all especially throughout western and southern
 parts of Chicago.
 
-## 5. Recommendations:
+## 5. Recommendations
 
 From the analysis I found these to be the most pressing calls to action for Cyclistic:
 
 * Talk to data engineers to see if there is anything that can be done about the missing and incorrect labelling of the station IDs and names, as it currently makes the data to biased to use without risking making bad decisions on it.
 * Look into how memberships for docked bike users currently work and if there is any way to simplify and clarify the process to these riders.
 * Since docked bike users use bikes for long times, see if that fact can be used to attract them into buying a membership.
-* Perform interviews or a questionaire with casual riders to find out more about why they mostly prefer electric bikes to classic bike, and what it would take for them to get a membership.
-* Run campaigns during the months of heavy casual rider bike use, during the months of June-August.
+* Perform interviews or a questionnaire with casual riders to find out more about why they mostly prefer electric bikes to classic bike, and what it would take for them to get a membership.
+* Run campaigns during the months of heavy casual rider bike use, during the months of May-November.
