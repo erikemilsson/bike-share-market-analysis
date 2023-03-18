@@ -296,13 +296,6 @@ Observations:
 * Docked bikes were not used at all by members.
 * Docked bikes are used much less often than any other type of bike.
 
-Some questions that I get from this graph:
-
-* Why don't any annual members use docked bikes at all? Are docked bikes 
-  available in the areas where they would be used? What percentage of rides are 
-  using docked bikes?
-* Why do casual riders prefer electric bikes and members prefer classic bikes?
-
 ## 4b. How is the trip time different for members and non-members?
 
 To get some stats on the trip time I'll create a table and a boxplot of the 
@@ -409,76 +402,79 @@ the year.
 
 ## 4d. Where are the bikes being used?
 
+Since there are a lot of datapoints I will split the whole dataset into a 
+samples of 10000 points of data for casual riders and members, as well as
+different bike types, to see how they differ in the locations in which the 
+rides start from.
+
+(By clicking the legend we can turn on or off the markers from the map)
+
 ```{r}
-df_clean_map <- df_clean %>%
+df_clean_map <- df_clean %>% 
   select(Rider_Type, 
          Bike_Type, 
-         Start_Longitude, Start_Latitude,
-         End_Longitude, End_Latitude)
+         Start_Longitude, 
+         Start_Latitude)
 
-ride_map <- plot_geo(df_clean_map %>% sample_n(1000),
-                     lat = ~Start_Latitude,
-                     lon = ~Start_Longitude, 
-                     marker = list(size = 3, color = "FFFCC", opacity = 0.25)) %>%
-  add_markers(hoverinfo = "none") %>%
+
+fig <- plot_ly(df_clean_map %>% sample_n(100000),
+    lat = ~Start_Latitude,
+    lon = ~Start_Longitude,
+    marker = list(size = 6, opacity = 0.2),
+    type = 'scattermapbox',
+    colors = "Set1",
+    color = (~Rider_Type)
+    ) %>%
   config(displayModeBar = FALSE) %>%
-  layout(geo =
-           list(
-             scope = 'usa',
-             showland = TRUE,
-             showlakes = TRUE,
-             landcolor = toRGB('lightgreen'),
-             lakecolor = toRGB('lightblue'))
-  )
+  layout(
+    mapbox = list(
+      style = 'carto-positron',
+      zoom = 8,
+      center = list(lon = -87.63, lat = 41.88)))  
 
-ride_map
-# plot_geo(df_clean, 
-#          locationmode = 'ISO-3',
-#          frame = )
-
+fig
 ```
 
+There is quite a lot of overlap between casual riders and members, so this 
+this map doesn't really give any new insights. Looking at the bike types gives 
+something interesting to go on however.
+```{r}
+df_clean_map <- df_clean %>% 
+  select(Rider_Type, 
+         Bike_Type, 
+         Start_Longitude, 
+         Start_Latitude)
 
-## 5. Evaluation and conclusions
 
-The lack of data on station names (of about 15%) and geographical coordinates 
-(less than 1%) can mean that the results are skewed, especially if the lack of 
-data for these observations are not spread evenly. For example, if there are 
-specific stations that don't show the data, then there could be a significant 
-difference from the reported and actual number of rides in that area.
+fig <- plot_ly(df_clean_map %>% sample_n(100000),
+    lat = ~Start_Latitude,
+    lon = ~Start_Longitude,
+    marker = list(size = 6, opacity = 0.2),
+    type = 'scattermapbox',
+    colors = "Set1",
+    color = (~Bike_Type)
+    ) %>%
+  config(displayModeBar = FALSE) %>%
+  layout(
+    mapbox = list(
+      style = 'carto-positron',
+      zoom = 8,
+      center = list(lon = -87.63, lat = 41.88)))  
 
-Recommendations for further analysis:
-* Look into why docked bike users aren't members. Like: why don't any annual 
-  members use docked bikes? Are memberships available for riders of docked bikes 
-  and/or are the riders aware of the memberships?
-* See why some docked bike rides are up to 40,000minutes long (almost 10 days). 
-  These riders are likely more intersted in a membership because they're paying 
-  a lot for the rentals by only being casual riders.
-* Collect data on the behavior of specific users as well, not only per ride. 
-  Tracking individuals can give more insight into how the users use the bikes.
-* Look into why there is missing data and if there is more than one reason for 
-  the 15% that don't show up in station names & IDs.
-* Why do casual riders prefer electric bikes and members prefer classic bikes? 
-  Perform a questionaire to capture what casual members are drawn to regarding 
-  electric bikes and if there is anything Cyclistic can do to make a membership 
-  more palatable from their answers.
-* Run campaigns during the months of heavy casual rider bike use, during 
-  the months of June-August.
-  
-  
-# TO DO
-I think I could shorten the text by omitting some things that don't specifically 
-have to do with the business task that I specifically am answering with my analysis. 
-Alternatively use some formatting to make it different from the main text.
+fig
+```
 
-I could include the link to the data and be clearer with the problems with the 
-data in a separate section in the Data Import, Exploration, and Cleaning chapter.
+The markers for the docked bike are much more centralized than both classic 
+and electric bikes. The classic bikes have more spread, but the electric 
+bikes have the most spread of all especially throughout western and southern
+parts of Chicago.
 
-I could write an introduction to the analysis phase with how I organized and 
-formatted data for the analysis, including statistical calculations.
+## 5. Recommendations:
 
-I'm most proud of the distribution of trip times, because I felt that it was a 
-simple way of showing that there is a difference for the bike types while also 
-showing how they are different, all in one graph. 
-I think I should look over the graphs again to make sure that the main messages 
-are even clearer by checking the labels again.
+From the analysis I found these to be the most pressing calls to action for Cyclistic:
+
+* Talk to data engineers to see if there is anything that can be done about the missing and incorrect labelling of the station IDs and names, as it currently makes the data to biased to use without risking making bad decisions on it.
+* Look into how memberships for docked bike users currently work and if there is any way to simplify and clarify the process to these riders.
+* Since docked bike users use bikes for long times, see if that fact can be used to attract them into buying a membership.
+* Perform interviews or a questionaire with casual riders to find out more about why they mostly prefer electric bikes to classic bike, and what it would take for them to get a membership.
+* Run campaigns during the months of heavy casual rider bike use, during the months of June-August.
