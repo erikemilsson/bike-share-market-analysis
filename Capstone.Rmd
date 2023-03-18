@@ -355,7 +355,7 @@ ggplot(df_clean,
   facet_wrap(~Rider_Type, ncol = 1) +
   theme_ridges() +
   labs(title = "Distribution of trip times under 1 hour", 
-       x = "Trip time [minutes]", y = "Rides [count]") +
+       x = "Trip time [minutes]", y = "Ride count distribution") +
   theme(plot.title = element_text(hjust = 0.5, color = "black", 
                               size = 14, face = "bold"))
 ```
