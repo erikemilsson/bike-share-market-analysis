@@ -2,6 +2,8 @@
 title: "Case Study: How Does a Bike-Share Navigate Speedy Success?"
 author: "Erik Emilsson"
 date: "20 December 2022"
+toc: true
+toc-depth: 2
 output:
   html_document: default
   pdf_document: default
@@ -14,22 +16,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 *This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business. I used SQL for data appending the datasets and R for data import, cleaning and visualization as well as the final reporting.*
 
-**TABLE OF CONTENTS**
-
-1. Business Task Background
-2. Importing Libraries, Data Import and Dataset
-3. Data Exploration and Cleaning
-4. Analyzing the Questions
-    a. How are the different bike types used by members and non-members?
-    b. How is the trip time different for members and non-members?
-    c. How are the bikes used throughout the year?
-    d. Where are the bikes being used?
-5. Recommendations
-
 # 1. Business Task Background
 Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. 
-Currently there are two types of riders: 1) casual riders (those who buy 
-single-ride or full-day passes), and 2) annual members a.k.a. Cyclistic members. 
+Currently there are two types of riders: 
+
+1. casual riders (those who buy single-ride or full-day passes), and 
+2. annual members a.k.a. Cyclistic members. 
 
 The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of 
 marketing) and the Cyclistic finance analysts have concluded that that annual 
@@ -46,16 +38,13 @@ future marketing program, this report will only answer the first question:
 
 * How do annual members and casual riders use Cyclistic bikes differently?
 * Why would casual riders buy Cyclistic annual memberships?
-* How can Cyclistic use digital media to influence casual riders to become 
-annual members?
+* How can Cyclistic use digital media to influence casual riders to become annual members?
 
 The stakeholders are:
 
 * Lily Moreno, director of marketing and my fictional manager,
-* The Cyclistic marketing analytics team (which I am part of), which supports 
-  the Cyclistic marketing strategy with data, and
-* The Cyclistic executive team that will decide if the recommended marketing 
-  program is approved or not.
+* The Cyclistic marketing analytics team (which I am part of), which supports the Cyclistic marketing strategy with data, and
+* The Cyclistic executive team that will decide if the recommended marketing program is approved or not.
   
 # 2. Importing Libraries, Data Import and Dataset
 
@@ -71,17 +60,9 @@ library(plotly)
 ```
 
 
-The dataset to represent Cyclistic bike share service bike data comes from Divvy, 
-Lyft and Scooters, LLC ("Bikeshare") data. See the licence agreement for more 
-information https://ride.divvybikes.com/data-license-agreement. 
-The past 12 months (March 2022 to Febuary 2023) of historical trip data was 
-downloaded from the database in CSV format to a Google Drive location,  
-then uploaded to BigQuery. After this, the 12 files were appended and 
-finally exported as a CSV file to be read into this R Markdown report. 
-Apart from appending the data, the SQL query essentially left the data unchanged 
-so I could showcase the data cleaning process in R, however, in practice it 
-should be more practical and efficient to do some of these steps in the SQL 
-query instead.
+The dataset to represent Cyclistic bike share service bike data comes from Divvy, Lyft and Scooters, LLC ("Bikeshare") data. See the licence agreement for more information https://ride.divvybikes.com/data-license-agreement. 
+
+The past 12 months (March 2022 to Febuary 2023) of historical trip data was downloaded from the database in CSV format to a Google Drive location, then uploaded to BigQuery. After this, the 12 files were appended and finally exported as a CSV file to be read into this R Markdown report. Apart from appending the data, the SQL query essentially left the data unchanged so I could showcase the data cleaning process in R, however, in practice it should be more practical and efficient to do some of these steps in the SQL query instead.
 
 ```{r Data Import, message=FALSE}
 df <- read_csv("202203-202302_AppendedData_withCoordinates.csv", 
@@ -92,11 +73,7 @@ colnames(df)
 
 # 3. Data Exploration and Cleaning
 
-First the headers are renamed to make them clearer. Then the date columns are 
-converted to the datetime format. The start dates are extracted then extracted
-from the datetime columns, and a trip time column is calculated by taking the 
-difference from the start and the end datetimes. The riginal datetime columns 
-are then removed.
+First the headers are renamed to make them clearer. Then the date columns are converted to the datetime format. The start dates are extracted then extracted from the datetime columns, and a trip time column is calculated by taking the difference from the start and the end datetimes. The riginal datetime columns are then removed.
 
 ```{r Rename headers, echo=FALSE, message=FALSE}
 df_1 <- df %>% 
@@ -132,17 +109,13 @@ df_2 <- df_1 %>%
 df_3 <- df_2
 ```
 
-Since the trip times and the starting dates have been "extracted" from the 
-original datetime columns, the original columns can be removed.
+Since the trip times and the starting dates have been "extracted" from the original datetime columns, the original columns can be removed.
 
 ```{r Remove date-time columns}
 df_3 <- select(df_3, -c(Start_Date_and_Time, End_Date_and_Time))
 ```
 
-Some Trip_Time_Minutes values are negative, which doesn't make sense. These 
-negative observations will be removed and additionally any trip times that are
-under 2 minutes will also be removed to make sure that the trips were 
-intentional by the rider.
+Some Trip_Time_Minutes values are negative, which doesn't make sense. These negative observations will be removed and additionally any trip times that areunder 2 minutes will also be removed to make sure that the trips were intentional by the rider.
 
 ```{r}
 paste(sum(df_3$Trip_Time_Minutes < 2),
@@ -154,8 +127,8 @@ df_clean <- df_3 %>%
   filter(Trip_Time_Minutes > 2) #removes rows below 0 minutes
 ```
 
-Now to look at missing values and unique values from the cleaned dataset, as 
-well as some statistics by using the skim function.
+Now to look at missing values and unique values from the cleaned dataset, as well as some statistics by using the skim function.
+
 ```{r Skim dataframe}
 df_skim <- skim_without_charts(df_clean) %>%
   print()
@@ -187,8 +160,7 @@ df_skim %>%
 * Between 15-17% of the data is missing for the start and end station names and 
   IDs. 
   
-From the skim function output the following information about *unique* 
-observations can be seen:
+From the skim function output the following information about *unique* observations can be seen:
 
 * There are a total of 5,829,084 observations that each have unique Ride_IDs.
 * Bike_Type has 3 unique values 
@@ -196,22 +168,9 @@ observations can be seen:
 * Start and end station names have close to 1700 unique values
 * Start and end IDs have close to 1300 unique values.
 
-The unique values of all the locations are much greater than the "over 600 
-docking station" that were stated in the case study description. Start/End 
-station ID come closest (1302 and 1309 unique values). This divergence
-merits an investigation, but will not be the focus of this analysis.
+The unique values of all the locations are much greater than the "over 600 docking station" that were stated in the case study description. Start/End station ID come closest (1302 and 1309 unique values). This divergence merits an investigation, but will not be the focus of this analysis.
 
-The location IDs consist of a code while the location names are either one or
-two street names (presumably their intersection) with a "&" symbol as their 
-denominator. There are more unique location names than location IDs, which
-could be for a variety or reasons. It could be misspellings, it could be 
-due to some street names being in reverse order, or it could perhaps be due
-to there being more than one station per intersection. Again, delving deeper
-into the geographical data is not the focus of this analysis as this is instead
-something that I might ask a data engineer for more information in a real
-world problem. However, to make sure I do my due diligence in this analysis, I 
-will export the unique values to Excel and show my observations and 
-recommendations here.
+The location IDs consist of a code while the location names are either one or two street names (presumably their intersection) with a "&" symbol as their denominator. There are more unique location names than location IDs, which could be for a variety or reasons. It could be misspellings, it could be due to some street names being in reverse order, or it could perhaps be due to there being more than one station per intersection. Again, delving deeper into the geographical data is not the focus of this analysis as this is instead something that I might ask a data engineer for more information in a real world problem. However, to make sure I do my due diligence in this analysis, I will export the unique values to Excel and show my observations and recommendations here.
 
 ```{r duplicate start street names, eval=FALSE, include=FALSE}
 uniqueStartStations <- df_3 %>%
@@ -259,20 +218,14 @@ From the investigation I found that:
 * There are 351 duplicate end station IDs (for station names)
 * Station ID codes are sometimes text e.g. street names
 
-The overlap likely means that there are many locations that should be aggregated
-into just one if a fair comparison were to be done for the counts of rides
-per location. For this reason, also due to the ~15% missing values, there is 
-significant bias when using this data, which should be kept in mind when 
-looking at the results so as to not make conclusions and decisions on this 
-misleading data. 
+The overlap likely means that there are many locations that should be aggregated into just one if a fair comparison were to be done for the counts of rides per location. For this reason, also due to the ~15% missing values, there is significant bias when using this data, which should be kept in mind when looking at the results so as to not make conclusions and decisions on this misleading data. 
 
 # 4. Analyzing the Questions
 
 ## 4a. How are the different bike types used by members and non-members?
 
-By splitting up the casual riders and members, and splitting up the three 
-type of bike types (classic bikes, docked bikes, and electric bikes) we can
-compare them by how many trips each makes a year:
+By splitting up the casual riders and members, and splitting up the three type of bike types (classic bikes, docked bikes, and electric bikes) we can compare them by how many trips each makes a year:
+
 ```{r Annual count of rides}
 df_clean %>%
   ggplot() +
@@ -293,8 +246,7 @@ Observations:
 
 ## 4b. How is the trip time different for members and non-members?
 
-To get some stats on the trip time I'll create a table and a boxplot of the 
-ride times.
+To get some stats on the trip time I'll create a table and a boxplot of the ride times.
 
 ```{r trip time stats}
 df_clean %>%
@@ -319,9 +271,7 @@ df_clean %>%
                               size = 14, face = "bold"))
 ```
 
-The boxplot wasn't very helpful since the spread of the docked bike rides is so 
-wide. I'll instead do a plot of only the mean times, keeping in mind that the
-large spread for some of the values.
+The boxplot wasn't very helpful since the spread of the docked bike rides is so wide. I'll instead do a plot of only the mean times, keeping in mind that the large spread for some of the values.
 
 ```{r Annual mean ride times, message=FALSE}
 df_clean %>%
@@ -339,10 +289,7 @@ df_clean %>%
                               size = 14, face = "bold"))
 ```
 
-This shows that although there aren't as many docked bikes as other types of 
-bikes, the total annual ride time is about 4-6 times higher. Also casual riders
-use bikes for longer than members, especially for classic bikes (about twice
-as long on average).
+This shows that although there aren't as many docked bikes as other types of bikes, the total annual ride time is about 4-6 times higher. Also casual riders use bikes for longer than members, especially for classic bikes (about twice as long on average).
 
 ```{r trip time distribution first hour, message=FALSE, warning=FALSE}
 ggplot(df_clean,
@@ -360,13 +307,11 @@ ggplot(df_clean,
                               size = 14, face = "bold"))
 ```
 
-This last graph for the distribution of times shows that the docked bike ride
-times are spread out much more than other bike rides. 
+This last graph for the distribution of times shows that the docked bike ride times are spread out much more than other bike rides. 
 
 ## 4c. How are the bikes used throughout the year?
 
-Now to plot the distribution of rides throughout the year, divided again into 
-casual riders and members, as well as bike types.
+Now to plot the distribution of rides throughout the year, divided again into casual riders and members, as well as bike types.
 
 ```{r trip time distribution over year}
 ggplot(df_clean, 
@@ -383,24 +328,17 @@ ggplot(df_clean,
   theme(plot.title = element_text(hjust = 0.5, color = "black", 
                               size = 14, face = "bold"))
 ```
+
 * Bike usage is in general higher between May-November and lower between November-May.
 * Electric bike rides seem to be used most in the months of July-October.
 * Classic and docked bikes overlap more, and are used most in the months of May-Aug.
-* Members have a more even distribution of usage for throughout the year compared 
-to casual riders. Essentially, the cooler months of September-May casual riders 
-use the service less relative to members while in the warmer months June-October 
-they use the bikes more relative to members.
+* Members have a more even distribution of usage for throughout the year compared to casual riders. Essentially, the cooler months of September-May casual riders use the service less relative to members while in the warmer months June-October they use the bikes more relative to members.
 
-As the summer months are where most casual riders are using the bikes, there 
-could be an opportunity to run campaigns during these months to hook them for 
-the year.
+As the summer months are where most casual riders are using the bikes, there could be an opportunity to run campaigns during these months to hook them for the year.
 
 ## 4d. Where are the bikes being used?
 
-Since there are a lot of datapoints I will split the whole dataset into a 
-samples of 10000 points of data for casual riders and members, as well as
-different bike types, to see how they differ in the locations in which the 
-rides start from.
+Since there are a lot of datapoints I will split the whole dataset into a samples of 10000 points of data for casual riders and members, as well as different bike types, to see how they differ in the locations in which the rides start from.
 
 (By clicking the legend we can turn on or off the markers from the map)
 
@@ -430,9 +368,8 @@ fig <- plot_ly(df_clean_map %>% sample_n(100000),
 fig
 ```
 
-There is quite a lot of overlap between casual riders and members, so this 
-this map doesn't really give any new insights. Looking at the bike types gives 
-something interesting to go on however.
+There is quite a lot of overlap between casual riders and members, so this this map doesn't really give any new insights. Looking at the bike types gives something interesting to go on however.
+
 ```{r}
 fig <- plot_ly(df_clean_map %>% sample_n(100000),
     lat = ~Start_Latitude,
@@ -452,10 +389,7 @@ fig <- plot_ly(df_clean_map %>% sample_n(100000),
 fig
 ```
 
-The markers for the docked bike are much more centralized than both classic 
-and electric bikes. The classic bikes have more spread, but the electric 
-bikes have the most spread of all especially throughout western and southern
-parts of Chicago.
+The markers for the docked bike are much more centralized than both classic and electric bikes. The classic bikes have more spread, but the electric bikes have the most spread of all especially throughout western and southern parts of Chicago.
 
 ## 5. Recommendations
 
