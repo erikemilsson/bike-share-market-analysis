@@ -4,37 +4,25 @@ author: "Erik Emilsson"
 date: "20 December 2022"
 toc: true
 toc-depth: 2
-output:
-  html_document: default
-  pdf_document: default
-  word_document: default
+format:
+  html:
+    code-fold: true
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 *This project is part of the Google Data Analytics Certificate on Coursera and the dataset and the fictional problem comes from Track 1 How does a bike-share navigate speedy business. I used SQL for data appending the datasets and R for data import, cleaning and visualization as well as the final reporting.*
 
-# 1. Business Task Background
-Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. 
-Currently there are two types of riders: 
+# 1. Introduction & Business Objectives
+
+Cyclist is a bike/share program with over 5,800 bikes and 600 docking stations. Currently there are two types of riders: 
 
 1. casual riders (those who buy single-ride or full-day passes), and 
 2. annual members a.k.a. Cyclistic members. 
 
-The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of 
-marketing) and the Cyclistic finance analysts have concluded that that annual 
-members are more profitable than casual riders. Before this, Cyclistic have 
-focused on building general awareness and appealing to broad consumer segments.
+The goal is to *maximize the number of annual memberships for the company by converting more casual riders to annual members*. Lily Moreno (director of marketing) and the Cyclistic finance analysts have concluded that that annual members are more profitable than casual riders. Before this, Cyclistic have focused on building general awareness and appealing to broad consumer segments.
 
-Currently 8 percent of riders use assistive options (e.g. reclining bikes, hand 
-tricycles, and cargo bikes) while the rest use traditional bikes. Those who use 
-traditional bikes are more likely to be casual riders, but about 30 percent of 
-them use the service to commute to work each day.
+Currently 8 percent of riders use assistive options (e.g. reclining bikes, hand tricycles, and cargo bikes) while the rest use traditional bikes. Those who use traditional bikes are more likely to be casual riders, but about 30 percent of them use the service to commute to work each day.
 
-Of the the following three questions that will guide the larger scope of the 
-future marketing program, this report will only answer the first question:
+Of the the following three questions that will guide the larger scope of the future marketing program, this report will only answer the first question:
 
 * How do annual members and casual riders use Cyclistic bikes differently?
 * Why would casual riders buy Cyclistic annual memberships?
@@ -46,9 +34,10 @@ The stakeholders are:
 * The Cyclistic marketing analytics team (which I am part of), which supports the Cyclistic marketing strategy with data, and
 * The Cyclistic executive team that will decide if the recommended marketing program is approved or not.
   
-# 2. Importing Libraries, Data Import and Dataset
+# 2. Data Preparation
 
 ```{r Import Libraries, message=FALSE, warning=FALSE}
+# Import Libraries
 library(tidyverse)
 library(skimr)
 library(janitor)
@@ -57,6 +46,8 @@ library(openxlsx)
 library(anytime)
 library(ggridges)
 library(plotly)
+library(bigrquery)
+library(googleAuthR)
 ```
 
 
@@ -65,13 +56,33 @@ The dataset to represent Cyclistic bike share service bike data comes from Divvy
 The past 12 months (March 2022 to Febuary 2023) of historical trip data was downloaded from the database in CSV format to a Google Drive location, then uploaded to BigQuery. After this, the 12 files were appended and finally exported as a CSV file to be read into this R Markdown report. Apart from appending the data, the SQL query essentially left the data unchanged so I could showcase the data cleaning process in R, however, in practice it should be more practical and efficient to do some of these steps in the SQL query instead.
 
 ```{r Data Import, message=FALSE}
-df <- read_csv("202203-202302_AppendedData_withCoordinates.csv", 
-               show_col_types = FALSE)
-colnames(df)
-#View(df)
+# Authenticate with Google Cloud
+options(googleAuthR.scopes.selected = "https://www.googleapis.com/auth/bigquery")
+googleAuthR::gar_auth()
+
+# Set up your project ID
+project_id <- "firm-solution-376302"
+
+# Write your SQL query
+SQL_query <- "
+  SELECT *
+  FROM `CyclisticBikes202311_202410.table_narrow_202311_202410`
+  LIMIT 100
+"
+
+# Execute the query
+query_job <- bq_project_query(project_id, SQL_query)
+
+# Download the result into an R data frame
+df <- bq_table_download(query_job)
+
+# Display the first few rows of the data frame
+head(df)
 ```
 
-# 3. Data Exploration and Cleaning
+
+
+# 3. Exploratory Data Analysis & Cleaning
 
 First the headers are renamed to make them clearer. Then the date columns are converted to the datetime format. The start dates are extracted then extracted from the datetime columns, and a trip time column is calculated by taking the difference from the start and the end datetimes. The riginal datetime columns are then removed.
 
@@ -91,8 +102,6 @@ df_1 <- df %>%
   rename(End_Latitude = end_lat) %>%
   rename(End_Longitude = end_lng) 
 ```
-
-
 
 ```{r parse datetime column, add start date column and add trip time columns}
 df_2 <- df_1 %>%
@@ -220,7 +229,7 @@ From the investigation I found that:
 
 The overlap likely means that there are many locations that should be aggregated into just one if a fair comparison were to be done for the counts of rides per location. For this reason, also due to the ~15% missing values, there is significant bias when using this data, which should be kept in mind when looking at the results so as to not make conclusions and decisions on this misleading data. 
 
-# 4. Analyzing the Questions
+# 4. Analysis & Findings
 
 ## 4a. How are the different bike types used by members and non-members?
 
@@ -391,7 +400,7 @@ fig
 
 The markers for the docked bike are much more centralized than both classic and electric bikes. The classic bikes have more spread, but the electric bikes have the most spread of all especially throughout western and southern parts of Chicago.
 
-## 5. Recommendations
+# 5. Recommendations & Insights
 
 From the analysis I found these to be the most pressing calls to action for Cyclistic:
 
