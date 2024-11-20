@@ -66,7 +66,7 @@ project_id <- "firm-solution-376302"
 # Write your SQL query
 SQL_query <- "
   SELECT *
-  FROM `CyclisticBikes202311_202410.table_narrow_202311_202410`
+  FROM `CyclisticBikes202311_202410.fact_table_202311_202410`
   LIMIT 100
 "
 
